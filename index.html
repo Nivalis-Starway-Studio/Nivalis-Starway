@@ -1,112 +1,466 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snowflake Generator - Nivalis Starway Studio</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <title>Nivalis-Starway Studio | 牧星雪缘工作室</title>
+    <meta name="description" content="创意工具与游戏集合 - Creative Tools & Games Collection">
+    <link rel="stylesheet" href="shared/styles/theme.css">
+    <style>
+        body {
+            overflow-x: hidden;
+        }
+
+        /* 星空背景效果 */
+        .starfield {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* 极光背景 */
+        .aurora-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(92, 107, 192, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(171, 71, 188, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(74, 144, 226, 0.15) 0%, transparent 60%);
+            animation: aurora-shift 15s ease-in-out infinite alternate;
+        }
+
+        @keyframes aurora-shift {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-20px) scale(1.05); }
+        }
+
+        /* 主标题区域 */
+        .hero {
+            text-align: center;
+            padding: var(--spacing-2xl) var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .logo-title {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 800;
+            background: linear-gradient(120deg, 
+                var(--primary-color) 0%,
+                var(--info-color) 30%,
+                var(--accent-color) 60%,
+                var(--secondary-color) 100%
+            );
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: var(--spacing-md);
+            text-shadow: 0 0 40px rgba(74, 144, 226, 0.3);
+            animation: glow-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .subtitle-cn {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            letter-spacing: 0.1em;
+        }
+
+        .description {
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto var(--spacing-xl);
+            line-height: 1.8;
+        }
+
+        /* 工具网格 */
+        .tools-section {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg) var(--spacing-2xl);
+        }
+
+        .section-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            color: var(--text-color);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .tool-card {
+            background: rgba(26, 35, 50, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            transition: all var(--transition-base);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                rgba(74, 144, 226, 0.1) 0%, 
+                rgba(171, 71, 188, 0.1) 100%
+            );
+            opacity: 0;
+            transition: opacity var(--transition-base);
+        }
+
+        .tool-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary-color);
+            box-shadow: 
+                0 8px 32px rgba(74, 144, 226, 0.3),
+                0 0 80px rgba(74, 144, 226, 0.2);
+        }
+
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+
+        .tool-card.available:hover {
+            border-color: var(--success-color);
+            box-shadow: 
+                0 8px 32px rgba(102, 187, 106, 0.3),
+                0 0 80px rgba(102, 187, 106, 0.2);
+        }
+
+        .tool-card.coming-soon {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .tool-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            display: block;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+
+        .tool-title {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-color);
+        }
+
+        .tool-subtitle {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .tool-description {
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: var(--spacing-md);
+            font-size: var(--text-sm);
+        }
+
+        .tool-status {
+            display: inline-block;
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-full);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-available {
+            background: rgba(102, 187, 106, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .status-coming-soon {
+            background: rgba(255, 167, 38, 0.2);
+            color: var(--warning-color);
+            border: 1px solid var(--warning-color);
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: var(--spacing-2xl);
+        }
+
+        .footer-links {
+            margin-top: var(--spacing-md);
+        }
+
+        .footer-links a {
+            margin: 0 var(--spacing-md);
+            color: var(--primary-color);
+            transition: color var(--transition-fast);
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-light);
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+
+            .hero {
+                padding: var(--spacing-xl) var(--spacing-md);
+            }
+        }
+
+        /* 链接样式覆盖 */
+        .tool-card-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Snowflake Generator</h1>
-            <p class="subtitle">Create beautiful, unique snowflakes</p>
-        </header>
+    <!-- 星空背景 -->
+    <div class="starfield" id="starfield"></div>
+    <div class="aurora-bg"></div>
 
-        <div class="main-content">
-            <div class="canvas-container">
-                <canvas id="snowflakeCanvas" width="800" height="800"></canvas>
-                <div class="animation-status" id="animationStatus"></div>
-            </div>
-
-            <div class="controls-panel">
-                <div class="control-section">
-                    <h3>Controls</h3>
-                    
-                    <div class="control-group">
-                        <label for="branches">Branches: <span id="branchesValue">6</span></label>
-                        <input type="range" id="branches" min="3" max="12" value="6" step="1">
-                    </div>
-
-                    <div class="control-group">
-                        <label for="complexity">Complexity: <span id="complexityValue">5</span></label>
-                        <input type="range" id="complexity" min="1" max="10" value="5" step="1">
-                    </div>
-
-                    <div class="control-group">
-                        <label for="size">Size: <span id="sizeValue">300</span></label>
-                        <input type="range" id="size" min="100" max="400" value="300" step="10">
-                    </div>
-
-                    <div class="control-group">
-                        <label for="lineWidth">Line Width: <span id="lineWidthValue">2</span></label>
-                        <input type="range" id="lineWidth" min="1" max="5" value="2" step="0.5">
-                    </div>
-
-                    <div class="control-group">
-                        <label for="color">Color:</label>
-                        <input type="color" id="color" value="#4a90e2">
-                    </div>
-                </div>
-
-                <div class="action-buttons">
-                    <button id="generateBtn" class="btn btn-primary" title="Generate new snowflake (G)">
-                        Generate New
-                    </button>
-                    <button id="toggleAnimationBtn" class="btn btn-secondary" title="Toggle animation (A)">
-                        Toggle Animation
-                    </button>
-                    <button id="exportBtn" class="btn btn-success" title="Export snowflake (E)">
-                        Export PNG
-                    </button>
-                    <div class="share-controls">
-                        <button id="shareBtn" class="btn btn-info" title="Share parameters (S)">
-                            Share
-                        </button>
-                        <div class="share-menu" id="shareMenu" hidden>
-                            <button data-share="json" class="share-option">Copy Parameters JSON</button>
-                            <button data-share="link" class="share-option">Copy Shareable Link</button>
-                        </div>
-                    </div>
-                    <button id="addToGalleryBtn" class="btn btn-accent" title="Add to gallery (C)">
-                        Add to Gallery
-                    </button>
-                    <button id="toggleGalleryBtn" class="btn btn-secondary" title="Toggle gallery view (V)">
-                        View Gallery
-                    </button>
-                </div>
-
-                <div class="keyboard-shortcuts">
-                    <h4>Keyboard Shortcuts</h4>
-                    <ul>
-                        <li><kbd>G</kbd> - Generate new snowflake</li>
-                        <li><kbd>A</kbd> - Toggle animation</li>
-                        <li><kbd>E</kbd> - Quick export</li>
-                        <li><kbd>S</kbd> - Share parameters</li>
-                        <li><kbd>C</kbd> - Capture to gallery</li>
-                        <li><kbd>V</kbd> - View gallery</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="gallery-panel" id="galleryPanel">
-            <div class="gallery-header">
-                <h2>Gallery</h2>
-                <div class="gallery-controls">
-                    <button id="exportAllBtn" class="btn btn-sm">Export All</button>
-                    <button id="clearGalleryBtn" class="btn btn-sm btn-danger">Clear All</button>
-                    <button id="closeGalleryBtn" class="btn btn-sm">Close</button>
-                </div>
-            </div>
-            <div class="gallery-grid" id="galleryGrid">
-                <div class="gallery-empty">No snowflakes captured yet. Use "Add to Gallery" or press 'C' to start collecting!</div>
-            </div>
-        </div>
-
-        <div class="notification" id="notification"></div>
+    <!-- 主内容 -->
+    <div class="hero">
+        <h1 class="logo-title">Nivalis-Starway</h1>
+        <p class="subtitle-cn">牧星雪缘工作室</p>
+        <p class="description">
+            探索创意的星空，收集雪花般的灵感<br>
+            Explore the starry sky of creativity, collect snowflake-like inspiration
+        </p>
     </div>
 
-    <script type="module" src="src/main.js"></script>
+    <div class="tools-section">
+        <h2 class="section-title">✨ 创意工具集 Creative Tools</h2>
+        
+        <div class="tools-grid">
+            <!-- 雪花生成器 - 已完成 -->
+            <a href="tools/snowflake-generator/" class="tool-card-link">
+                <div class="tool-card available">
+                    <span class="tool-icon">❄️</span>
+                    <h3 class="tool-title">Snowflake Generator</h3>
+                    <p class="tool-subtitle">雪花生成器</p>
+                    <p class="tool-description">
+                        创造独特而美丽的程序化雪花，支持实时动画、参数分享和画廊收藏功能。
+                    </p>
+                    <span class="tool-status status-available">可用 Available</span>
+                </div>
+            </a>
+
+            <!-- 星图生成器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">🌟</span>
+                <h3 class="tool-title">Star Map Generator</h3>
+                <p class="tool-subtitle">星图生成器</p>
+                <p class="tool-description">
+                    根据特定日期和地点生成精美的星空图，记录重要时刻的天空。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 极光模拟器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">🌌</span>
+                <h3 class="tool-title">Aurora Simulator</h3>
+                <p class="tool-subtitle">极光模拟器</p>
+                <p class="tool-description">
+                    交互式极光效果模拟器，创造梦幻般的北极光动画效果。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 晶体生成器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">💎</span>
+                <h3 class="tool-title">Crystal Generator</h3>
+                <p class="tool-subtitle">晶体生成器</p>
+                <p class="tool-description">
+                    生成3D晶体结构，探索几何之美与光影效果。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 音乐可视化 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">🎵</span>
+                <h3 class="tool-title">Audio Visualizer</h3>
+                <p class="tool-subtitle">音乐可视化</p>
+                <p class="tool-description">
+                    将音乐转化为动态视觉效果，体验声音与图像的完美融合。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 粒子艺术 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">✨</span>
+                <h3 class="tool-title">Particle Art Studio</h3>
+                <p class="tool-subtitle">粒子艺术工作室</p>
+                <p class="tool-description">
+                    创造基于粒子系统的交互艺术作品，探索动态美学。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 分形探索器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">🌀</span>
+                <h3 class="tool-title">Fractal Explorer</h3>
+                <p class="tool-subtitle">分形探索器</p>
+                <p class="tool-description">
+                    深入曼德博集合与Julia集的无限世界，探索数学之美。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 像素艺术编辑器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">🎨</span>
+                <h3 class="tool-title">Pixel Art Editor</h3>
+                <p class="tool-subtitle">像素艺术编辑器</p>
+                <p class="tool-description">
+                    简洁强大的像素画创作工具，支持图层和动画功能。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 随机地形生成器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">🏔️</span>
+                <h3 class="tool-title">Terrain Generator</h3>
+                <p class="tool-subtitle">地形生成器</p>
+                <p class="tool-description">
+                    程序化生成逼真的3D地形，用于游戏开发或艺术创作。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+
+            <!-- 诗歌生成器 - 待开发 -->
+            <div class="tool-card coming-soon">
+                <span class="tool-icon">📜</span>
+                <h3 class="tool-title">Poetry Generator</h3>
+                <p class="tool-subtitle">诗歌生成器</p>
+                <p class="tool-description">
+                    AI辅助诗歌创作工具，激发灵感，创作独特的诗意文字。
+                </p>
+                <span class="tool-status status-coming-soon">即将推出 Coming Soon</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>&copy; 2024 Nivalis-Starway Studio (牧星雪缘工作室)</p>
+        <div class="footer-links">
+            <a href="https://deepwiki.com/Nivalis-Starway-Studio/Nivalis-Starway" target="_blank">📚 DeepWiki</a>
+            <a href="https://github.com/Nivalis-Starway-Studio" target="_blank">💻 GitHub</a>
+            <a href="LICENSE">📄 License</a>
+        </div>
+        <p style="margin-top: var(--spacing-md); font-size: var(--text-sm);">
+            探索无限创意 · Explore Infinite Creativity
+        </p>
+    </footer>
+
+    <script>
+        // 生成星空背景
+        function createStarfield() {
+            const starfield = document.getElementById('starfield');
+            const numberOfStars = 150;
+
+            for (let i = 0; i < numberOfStars; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                // 随机位置
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                
+                // 随机大小
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                
+                // 随机动画延迟
+                star.style.animationDelay = Math.random() * 3 + 's';
+                
+                // 随机动画时长
+                star.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                
+                starfield.appendChild(star);
+            }
+        }
+
+        // 页面加载时创建星空
+        createStarfield();
+
+        // 添加鼠标跟随光晕效果（可选）
+        document.addEventListener('mousemove', (e) => {
+            const glow = document.createElement('div');
+            glow.style.position = 'fixed';
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+            glow.style.width = '200px';
+            glow.style.height = '200px';
+            glow.style.background = 'radial-gradient(circle, rgba(74, 144, 226, 0.1) 0%, transparent 70%)';
+            glow.style.pointerEvents = 'none';
+            glow.style.transform = 'translate(-50%, -50%)';
+            glow.style.zIndex = '-1';
+            glow.style.transition = 'opacity 0.3s';
+            
+            document.body.appendChild(glow);
+            
+            setTimeout(() => {
+                glow.style.opacity = '0';
+                setTimeout(() => glow.remove(), 300);
+            }, 100);
+        });
+    </script>
 </body>
 </html>
