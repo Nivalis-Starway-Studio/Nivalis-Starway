@@ -1,0 +1,16 @@
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Temporary files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Generated assets
+*.tmp
