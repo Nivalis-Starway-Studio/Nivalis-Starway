@@ -82,7 +82,7 @@ export class GalleryManager {
         const tempCtx = tempCanvas.getContext('2d');
 
         const state = createSnowflakeState(params);
-        renderSnowflake(tempCtx, state, { angle: 0, pulse: 0 });
+        renderSnowflake(tempCtx, state, { angle: 0, pulse: 0, time: 0 });
 
         thumbnailCtx.drawImage(tempCanvas, 0, 0, 800, 800, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
         const thumbnailData = thumbnailCanvas.toDataURL('image/png');
