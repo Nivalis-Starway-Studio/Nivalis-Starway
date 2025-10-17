@@ -7,12 +7,15 @@ A beautiful, interactive snowflake generator with advanced features including ke
 ## Features
 
 - **Procedural Generation**: Create unique, algorithmically-generated snowflakes
-- **Real-time Animation**: Smooth rotation and pulsing effects
+- **Radial Symmetry**: 6-fold, 8-fold, or 12-fold symmetrical patterns
+- **Galaxy Effects**: Nebula-style gradients and star field backgrounds
+- **Real-time Animation**: Smooth rotation and pulsing effects with twinkling stars
 - **Keyboard Shortcuts**: Quick access to common actions
 - **Share Functionality**: Copy parameters as JSON or shareable links
 - **Gallery System**: Save, manage, and export multiple snowflakes
 - **High-Quality Export**: Export snowflakes as 2400x2400 PNG images
-- **Responsive Design**: Works on desktop and mobile devices
+- **Responsive Canvas**: Auto-resizes to fit different screen sizes
+- **Performance Optimized**: Efficient rendering with minimal CPU usage
 
 ## Quick Start
 

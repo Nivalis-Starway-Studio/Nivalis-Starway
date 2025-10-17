@@ -6,15 +6,26 @@ import {
     decodeParameters,
     createShareableHash,
 } from './snowflake.js';
+import { SnowflakeGenerator } from './snowflakeGenerator.js';
 import { GalleryManager } from './gallery.js';
 import { ShareManager } from './share.js';
 import { registerKeyboardShortcuts } from './keyboard.js';
 
 const NOTIFICATION_TIMEOUT = 3200;
+const SYMMETRY_OPTIONS = [6, 8, 12];
 
 function parseNumber(value, fallback, parser = Number) {
     const parsed = parser(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function snapToSymmetry(value) {
+    const numeric = Number.isFinite(value) ? value : SYMMETRY_OPTIONS[0];
+    return SYMMETRY_OPTIONS.reduce((closest, option) => {
+        const diffCurrent = Math.abs(option - numeric);
+        const diffClosest = Math.abs(closest - numeric);
+        return diffCurrent < diffClosest ? option : closest;
+    }, SYMMETRY_OPTIONS[0]);
 }
 
 function clampToInput(input, value) {
@@ -45,7 +56,6 @@ class SnowflakeApp {
         if (!this.canvas) {
             throw new Error('Snowflake canvas element not found');
         }
-        this.ctx = this.canvas.getContext('2d');
 
         this.controls = {
             branches: document.getElementById('branches'),
@@ -65,14 +75,9 @@ class SnowflakeApp {
 
         this.snowflakeState = null;
         this.currentSeed = randomSeed();
-        this.animation = {
-            running: true,
-            angle: 0,
-            pulse: 0,
-            lastTime: performance.now(),
-        };
-        this.needsRender = true;
         this.notificationTimer = null;
+
+        this.generator = new SnowflakeGenerator(this.canvas);
 
         this.gallery = new GalleryManager();
         this.share = new ShareManager();
@@ -89,7 +94,6 @@ class SnowflakeApp {
         }
 
         this.updateAnimationStatus();
-        requestAnimationFrame((timestamp) => this.loop(timestamp));
     }
 
     bindUI() {
@@ -104,8 +108,18 @@ class SnowflakeApp {
             if (!input) return;
             const label = document.getElementById(labelId);
             const updateLabel = () => {
+                let displayValue = input.value;
+                if (input === this.controls.branches) {
+                    const snapped = snapToSymmetry(parseNumber(displayValue, SYMMETRY_OPTIONS[0], Number.parseInt));
+                    if (Number(displayValue) !== snapped) {
+                        input.value = snapped;
+                        displayValue = snapped;
+                    } else {
+                        displayValue = snapped;
+                    }
+                }
                 if (label) {
-                    label.textContent = input.value;
+                    label.textContent = displayValue;
                 }
             };
             updateLabel();
@@ -171,8 +185,9 @@ class SnowflakeApp {
     }
 
     getControlSettings() {
+        const rawBranches = parseNumber(this.controls.branches?.value, SYMMETRY_OPTIONS[0], Number.parseInt);
         return {
-            branches: parseNumber(this.controls.branches?.value, 6, Number.parseInt),
+            branches: snapToSymmetry(rawBranches),
             complexity: parseNumber(this.controls.complexity?.value, 5, Number.parseInt),
             size: parseNumber(this.controls.size?.value, 300, Number.parseInt),
             lineWidth: parseNumber(this.controls.lineWidth?.value, 2, Number.parseFloat),
@@ -222,15 +237,12 @@ class SnowflakeApp {
 
         this.snowflakeState = createSnowflakeState({ ...params, seed: this.currentSeed });
 
-        if (!options.preserveAngle) {
-            this.animation.angle = 0;
-        }
-        if (!options.preservePulse) {
-            this.animation.pulse = 0;
-        }
-        this.animation.lastTime = performance.now();
+        this.generator.setState(this.snowflakeState, {
+            preserveAngle: options.preserveAngle,
+            preservePulsePhase: options.preservePulse,
+            preserveTime: options.preserveTime ?? false,
+        });
 
-        this.requestRender();
         this.updateAnimationStatus();
         this.updateShareHash();
 
@@ -260,53 +272,26 @@ class SnowflakeApp {
         }
     }
 
-    requestRender() {
-        this.needsRender = true;
-    }
-
-    loop(timestamp) {
-        requestAnimationFrame((time) => this.loop(time));
-        if (!this.snowflakeState) return;
-
-        const delta = timestamp - this.animation.lastTime;
-        this.animation.lastTime = timestamp;
-
-        if (this.animation.running && this.snowflakeState.params.animate) {
-            this.animation.angle += delta * this.snowflakeState.params.spinSpeed;
-            this.animation.pulse += delta * this.snowflakeState.params.pulseSpeed;
-            this.needsRender = true;
-        }
-
-        if (!this.needsRender) return;
-
-        const pulseValue = Math.sin(this.animation.pulse);
-        renderSnowflake(this.ctx, this.snowflakeState, {
-            angle: this.animation.angle,
-            pulse: pulseValue,
-        });
-        this.needsRender = false;
-    }
-
     toggleAnimation() {
-        this.animation.running = !this.animation.running;
+        const running = this.generator.toggleAnimation();
         this.updateAnimationStatus();
-        this.requestRender();
         this.showNotification(
-            this.animation.running ? 'Animation resumed' : 'Animation paused',
+            running ? '动画已恢复' : '动画已暂停',
             'info',
         );
     }
 
     updateAnimationStatus() {
-        const label = this.animation.running ? 'Animation: ON' : 'Animation: OFF';
+        const running = this.generator.isRunning();
+        const label = running ? 'Animation: ON' : 'Animation: OFF';
         const statusEl = this.controls.animationStatus;
         if (statusEl) {
             statusEl.textContent = label;
-            statusEl.classList.toggle('active', this.animation.running);
+            statusEl.classList.toggle('active', running);
         }
 
         if (this.controls.toggleAnimationBtn) {
-            this.controls.toggleAnimationBtn.textContent = this.animation.running
+            this.controls.toggleAnimationBtn.textContent = running
                 ? 'Pause Animation'
                 : 'Resume Animation';
         }
@@ -315,7 +300,7 @@ class SnowflakeApp {
     exportSnowflake(filename = null, paramsOverride = null) {
         const state = paramsOverride ? createSnowflakeState(paramsOverride) : this.snowflakeState;
         if (!state) {
-            this.showNotification('Nothing to export yet', 'error');
+            this.showNotification('还没有可导出的雪花', 'error');
             return;
         }
 
@@ -323,14 +308,14 @@ class SnowflakeApp {
         exportCanvas.width = 2400;
         exportCanvas.height = 2400;
         const exportCtx = exportCanvas.getContext('2d');
-        const angle = paramsOverride ? 0 : this.animation.angle;
-        const pulse = paramsOverride ? 0 : Math.sin(this.animation.pulse);
 
-        renderSnowflake(exportCtx, state, { angle, pulse });
+        const renderSnapshot = paramsOverride ? { angle: 0, pulse: 0, time: 0 } : this.generator.getRenderSnapshot();
+
+        renderSnowflake(exportCtx, state, renderSnapshot);
 
         exportCanvas.toBlob((blob) => {
             if (!blob) {
-                this.showNotification('Export failed', 'error');
+                this.showNotification('导出失败', 'error');
                 return;
             }
             const url = URL.createObjectURL(blob);
@@ -340,18 +325,18 @@ class SnowflakeApp {
             link.href = url;
             link.click();
             URL.revokeObjectURL(url);
-            this.showNotification('Snowflake exported as PNG', 'success');
+            this.showNotification('雪花已导出为 PNG', 'success');
         }, 'image/png');
     }
 
     captureToGallery() {
         if (!this.snowflakeState) {
-            this.showNotification('Generate a snowflake first', 'error');
+            this.showNotification('请先生成一个雪花', 'error');
             return;
         }
         const paramsCopy = JSON.parse(JSON.stringify(this.snowflakeState.params));
         this.gallery.add(paramsCopy);
-        this.showNotification('Snowflake saved to gallery', 'success');
+        this.showNotification('雪花已保存到画廊', 'success');
     }
 
     updateShareHash() {

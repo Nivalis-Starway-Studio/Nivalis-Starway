@@ -167,6 +167,12 @@ h1 {
     background: none;
 }
 
+.control-group .hint {
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
 .action-buttons {
     margin: 25px 0;
     display: flex;
