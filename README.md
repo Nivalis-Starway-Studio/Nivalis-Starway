@@ -1,7 +1,7 @@
 # Nivalis-Starway Studio Monorepo · 牧星雪缘工作室多工具仓库
 
 欢迎来到 **Nivalis-Starway Studio**（牧星雪缘工作室）的多工具创意实验室。这个仓库以 Monorepo 形式管理所有的互动工具与游戏，统一的极光星空视觉风格、共享主题以及协同的开发体验帮助我们快速迭代未来的创意作品。
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Nivalis-Starway-Studio/Nivalis-Starway)
 ## ✨ Overview 概览
 - **多工具架构**：单一仓库管理多个工具/游戏，便于共享主题、组件与资源。
 - **统一品牌视觉**：通过 `/shared/styles/theme.css` 定义的星空/极光主题，在所有页面保持一致的体验。
