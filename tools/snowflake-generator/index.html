@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snowflake Generator 雪花生成器 - Nivalis Starway Studio</title>
+    <link rel="stylesheet" href="../../shared/styles/theme.css">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="page-shell">
+        <nav class="top-nav">
+            <a class="nav-brand" href="../../index.html">⟵ 返回主页 · Back to Home</a>
+        </nav>
+        <div class="container">
+            <header>
+                <h1>Snowflake Generator · 雪花生成器</h1>
+                <p class="subtitle">Create beautiful, unique snowflakes · 创造独特的雪花艺术</p>
+            </header>
+
+            <div class="main-content">
+                <div class="canvas-container">
+                    <canvas id="snowflakeCanvas" width="800" height="800"></canvas>
+                    <div class="animation-status" id="animationStatus"></div>
+                </div>
+
+                <div class="controls-panel">
+                    <div class="control-section">
+                        <h3>Controls 控制面板</h3>
+                        
+                        <div class="control-group">
+                            <label for="branches">Branches（分支数）: <span id="branchesValue">6</span></label>
+                            <input type="range" id="branches" min="3" max="12" value="6" step="1">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="complexity">Complexity（复杂度）: <span id="complexityValue">5</span></label>
+                            <input type="range" id="complexity" min="1" max="10" value="5" step="1">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="size">Size（尺寸）: <span id="sizeValue">300</span></label>
+                            <input type="range" id="size" min="100" max="400" value="300" step="10">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="lineWidth">Line Width（线条宽度）: <span id="lineWidthValue">2</span></label>
+                            <input type="range" id="lineWidth" min="1" max="5" value="2" step="0.5">
+                        </div>
+
+                        <div class="control-group">
+                            <label for="color">Color（颜色选择）:</label>
+                            <input type="color" id="color" value="#4a90e2">
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="generateBtn" class="btn btn-primary" title="Generate new snowflake (G)｜生成新雪花">
+                            Generate New（生成新雪花）
+                        </button>
+                        <button id="toggleAnimationBtn" class="btn btn-secondary" title="Toggle animation (A)｜切换动画">
+                            Toggle Animation（切换动画）
+                        </button>
+                        <button id="exportBtn" class="btn btn-success" title="Export snowflake (E)｜导出雪花">
+                            Export PNG（导出 PNG）
+                        </button>
+                        <div class="share-controls">
+                            <button id="shareBtn" class="btn btn-info" title="Share parameters (S)｜分享参数">
+                                Share（分享）
+                            </button>
+                            <div class="share-menu" id="shareMenu" hidden>
+                                <button data-share="json" class="share-option">Copy Parameters JSON（复制参数 JSON）</button>
+                                <button data-share="link" class="share-option">Copy Shareable Link（复制分享链接）</button>
+                            </div>
+                        </div>
+                        <button id="addToGalleryBtn" class="btn btn-accent" title="Add to gallery (C)｜添加至画廊">
+                            Add to Gallery（添加到画廊）
+                        </button>
+                        <button id="toggleGalleryBtn" class="btn btn-secondary" title="Toggle gallery view (V)｜切换画廊视图">
+                            View Gallery（查看画廊）
+                        </button>
+                    </div>
+
+                    <div class="keyboard-shortcuts">
+                        <h4>Keyboard Shortcuts 键盘快捷键</h4>
+                        <ul>
+                            <li><kbd>G</kbd> - Generate new snowflake（生成新雪花）</li>
+                            <li><kbd>A</kbd> - Toggle animation（切换动画）</li>
+                            <li><kbd>E</kbd> - Quick export（快速导出）</li>
+                            <li><kbd>S</kbd> - Share parameters（分享参数）</li>
+                            <li><kbd>C</kbd> - Capture to gallery（收藏至画廊）</li>
+                            <li><kbd>V</kbd> - View gallery（查看画廊）</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gallery-panel" id="galleryPanel">
+                <div class="gallery-header">
+                    <h2>Gallery · 雪花画廊</h2>
+                    <div class="gallery-controls">
+                        <button id="exportAllBtn" class="btn btn-sm">Export All（全部导出）</button>
+                        <button id="clearGalleryBtn" class="btn btn-sm btn-danger">Clear All（清空画廊）</button>
+                        <button id="closeGalleryBtn" class="btn btn-sm">Close（关闭）</button>
+                    </div>
+                </div>
+                <div class="gallery-grid" id="galleryGrid">
+                    <div class="gallery-empty">No snowflakes captured yet. Use "Add to Gallery" or press 'C' to start collecting!（尚未收藏雪花，点击“添加到画廊”或按 C 键开始收集！）</div>
+                </div>
+            </div>
+
+            <div class="notification" id="notification"></div>
+        </div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
