@@ -1,5 +1,5 @@
 """
-课堂管理系统 / Classroom Manager Application
+课堂管理系统
 """
 
 __version__ = "1.0.0"

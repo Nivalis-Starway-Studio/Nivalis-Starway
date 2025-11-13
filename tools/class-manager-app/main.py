@@ -1,6 +1,5 @@
 """
 课堂管理系统 - 主应用入口
-Classroom Manager Application - Main Entry Point
 """
 
 import tkinter as tk
@@ -14,28 +13,27 @@ from ui.class_detail_view import ClassDetailView
 class ClassManagerApp(tk.Tk):
     """
     主应用类 - 控制器和根窗口
-    / Main application class - Controller and root window
     """
 
     def __init__(self):
-        """初始化应用 / Initialize the application"""
+        """初始化应用"""
         super().__init__()
 
-        # 设置窗口属性 / Set window properties
+        # 设置窗口属性
         self.title("课堂管理系统")
         self.geometry("900x700")
         self.minsize(800, 600)
 
-        # 初始化数据存储 / Initialize data store
+        # 初始化数据存储
         self.data_store = ClassDataStore()
 
-        # 当前班级追踪 / Track current classroom
+        # 当前班级追踪
         self.current_classroom_id = None
 
-        # 配置样式 / Configure style
+        # 配置样式
         self.setup_style()
 
-        # 创建容器 / Create container
+        # 创建容器
         container = ttk.Frame(self)
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
@@ -43,24 +41,21 @@ class ClassManagerApp(tk.Tk):
 
         self.frames = {}
 
-        # 实例化所有视图 / Instantiate all views
+        # 实例化所有视图
         for F in (LoginView, MainView, ClassDetailView):
             frame = F(container, self)
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        # 显示登录视图 / Show login view
+        # 显示登录视图
         self.show_frame("LoginView")
 
     def setup_style(self) -> None:
-        """
-        配置应用样式
-        / Configure application styling
-        """
+        """配置应用样式"""
         style = ttk.Style()
         style.theme_use("clam")
 
-        # 配置颜色 / Configure colors
+        # 配置颜色
         style.configure("TLabel", background="", foreground="black")
         style.configure("TButton", padding=5)
         style.configure("TFrame", background="")
@@ -74,46 +69,43 @@ class ClassManagerApp(tk.Tk):
     def show_frame(self, name: str) -> None:
         """
         显示指定的视图框架
-        / Show the specified frame
         
         Args:
-            name: 框架名称 / Frame name
+            name: 框架名称
         """
         frame = self.frames.get(name)
         if frame:
             frame.tkraise()
 
-            # 如果是班级详情视图，加载数据 / If ClassDetailView, load data
+            # 如果是班级详情视图，加载数据
             if name == "ClassDetailView" and self.current_classroom_id:
                 frame.load_classroom_data(self.current_classroom_id)
 
-            # 重置视图 / Reset view if it has reset method
+            # 重置视图
             if hasattr(frame, "reset"):
                 frame.reset()
 
     def set_current_classroom(self, class_id: str) -> None:
         """
         设置当前班级
-        / Set current classroom
         
         Args:
-            class_id: 班级ID / Classroom ID
+            class_id: 班级ID
         """
         self.current_classroom_id = class_id
 
     def get_current_classroom(self) -> str:
         """
         获取当前班级ID
-        / Get current classroom ID
         
         Returns:
-            当前班级ID / Current classroom ID
+            当前班级ID
         """
         return self.current_classroom_id
 
 
 def main():
-    """应用入口点 / Application entry point"""
+    """应用入口点"""
     app = ClassManagerApp()
     app.mainloop()
 

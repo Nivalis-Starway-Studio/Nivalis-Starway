@@ -1,4 +1,4 @@
-"""UI模块 / UI module for classroom manager"""
+"""UI模块"""
 
 from .login_view import LoginView
 from .main_view import MainView
