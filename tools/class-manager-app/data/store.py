@@ -3,7 +3,8 @@
 Data store and business logic for classroom management
 """
 
-from typing import List, Dict
+from typing import List, Dict, Tuple
+from datetime import datetime, timedelta
 from .models import Classroom, Student
 
 
@@ -13,6 +14,7 @@ class ClassDataStore:
     def __init__(self):
         """初始化数据存储 / Initialize the data store"""
         self.classrooms: Dict[str, Classroom] = {}
+        self.current_week = self._get_current_week()
         self._load_sample_data()
 
     def _load_sample_data(self) -> None:
@@ -151,3 +153,119 @@ class ClassDataStore:
             "total_cumulative": total_cumulative,
             "student_count": student_count,
         }
+
+    def _get_current_week(self) -> int:
+        """
+        获取当前周数 / Get current week number (ISO 8601)
+        """
+        return datetime.now().isocalendar()[1]
+
+    def get_week_range(self, week_offset: int = 0) -> Tuple[str, str]:
+        """
+        获取指定周的日期范围 / Get date range for a specific week
+        week_offset: 0=本周, -1=上周, -2=上上周, 1=下周
+        """
+        current_date = datetime.now()
+        start_of_week = current_date - timedelta(days=current_date.weekday())
+        target_week_start = start_of_week + timedelta(weeks=week_offset)
+        target_week_end = target_week_start + timedelta(days=6)
+        
+        start_str = target_week_start.strftime("%m/%d")
+        end_str = target_week_end.strftime("%m/%d")
+        return start_str, end_str
+
+    def add_classroom(self, name: str, class_id: str = None) -> Classroom:
+        """
+        添加新班级 / Add a new classroom
+        """
+        if class_id is None:
+            class_id = f"class_{len(self.classrooms)}_{datetime.now().timestamp()}"
+        
+        if class_id in self.classrooms:
+            return None
+        
+        classroom = Classroom(name=name, class_id=class_id)
+        self.classrooms[class_id] = classroom
+        return classroom
+
+    def remove_classroom(self, class_id: str) -> bool:
+        """
+        删除班级 / Remove a classroom
+        """
+        if class_id in self.classrooms:
+            del self.classrooms[class_id]
+            return True
+        return False
+
+    def update_classroom_name(self, class_id: str, new_name: str) -> bool:
+        """
+        更新班级名字 / Update classroom name
+        """
+        classroom = self.get_classroom(class_id)
+        if classroom:
+            classroom.name = new_name
+            return True
+        return False
+
+    def add_student_to_classroom(self, class_id: str, student_name: str) -> bool:
+        """
+        添加学生到班级 / Add a student to classroom
+        """
+        classroom = self.get_classroom(class_id)
+        if not classroom:
+            return False
+        
+        student = Student(name=student_name)
+        classroom.add_student(student)
+        return True
+
+    def remove_student_from_classroom(self, class_id: str, student_name: str) -> bool:
+        """
+        从班级删除学生 / Remove a student from classroom
+        """
+        classroom = self.get_classroom(class_id)
+        if not classroom:
+            return False
+        
+        return classroom.remove_student_by_name(student_name)
+
+    def update_student_name(self, class_id: str, old_name: str, new_name: str) -> bool:
+        """
+        修改学生名字 / Update student name
+        """
+        classroom = self.get_classroom(class_id)
+        if not classroom:
+            return False
+        
+        student = classroom.get_student_by_name(old_name)
+        if not student:
+            return False
+        
+        student.name = new_name
+        return True
+
+    def get_week_coins(self, class_id: str, week_offset: int = 0) -> Dict[str, int]:
+        """
+        获取指定周的币数数据 / Get coin data for a specific week
+        """
+        classroom = self.get_classroom(class_id)
+        if not classroom:
+            return {}
+        
+        week_coins = {}
+        for student in classroom.get_all_students():
+            week_coins[student.name] = student.weekly_history.get(
+                self.current_week + week_offset, 0
+            )
+        return week_coins
+
+    def get_four_weeks_data(self, class_id: str) -> Dict[int, Dict[str, int]]:
+        """
+        获取4周的数据（上周、本周、下周、下下周）
+        / Get 4 weeks of data (last week, this week, next 2 weeks)
+        Returns: {week_offset: {student_name: coins}}
+        """
+        weeks_data = {}
+        for offset in [-1, 0, 1, 2]:
+            weeks_data[offset] = self.get_week_coins(class_id, offset)
+        return weeks_data
