@@ -20,7 +20,6 @@ class LoginView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.pack(fill=tk.BOTH, expand=True)
 
         # 设置样式 / Set style
         self.configure(padding="20")
