@@ -26,3 +26,4 @@ __pycache__/
 .venv
 venv/
 ENV/
+storage_data/

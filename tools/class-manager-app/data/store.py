@@ -6,6 +6,7 @@ Data store and business logic for classroom management
 from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 from .models import Classroom, Student
+from .excel_storage import ExcelStorage
 
 
 class ClassDataStore:
@@ -13,9 +14,10 @@ class ClassDataStore:
 
     def __init__(self):
         """初始化数据存储 / Initialize the data store"""
+        self.storage = ExcelStorage()
         self.classrooms: Dict[str, Classroom] = {}
         self.current_week = self._get_current_week()
-        self._load_sample_data()
+        self._load_data()
 
     def _load_sample_data(self) -> None:
         """加载示例数据 / Load sample data with seven classes"""
@@ -72,6 +74,31 @@ class ClassDataStore:
         class7.add_student(Student(name="包容", weekly_coins=1, cumulative_coins=55))
         self.classrooms["4A"] = class7
 
+        # 初始化当前周的历史记录
+        for classroom in self.classrooms.values():
+            for student in classroom.students:
+                student.weekly_history.setdefault(self.current_week, student.weekly_coins)
+
+    def _load_data(self) -> None:
+        """
+        从存储加载数据或初始化示例数据
+        / Load data from storage or initialize sample data
+        """
+        loaded_classrooms = self.storage.load_classrooms()
+        if loaded_classrooms:
+            self.classrooms = loaded_classrooms
+        else:
+            # 如果没有存储数据，加载示例数据
+            self._load_sample_data()
+            self.save_data()
+
+    def save_data(self) -> None:
+        """
+        保存数据到存储
+        / Save data to storage
+        """
+        self.storage.save_classrooms(self.classrooms)
+
     def get_all_classrooms(self) -> List[Classroom]:
         """获取所有课堂 / Get all classrooms"""
         return list(self.classrooms.values())
@@ -80,12 +107,18 @@ class ClassDataStore:
         """按ID获取课堂 / Get a classroom by ID"""
         return self.classrooms.get(class_id)
 
-    def update_student_weekly_coins(
-        self, class_id: str, student_name: str, new_weekly_coins: int
+    def update_student_week_coins(
+        self, class_id: str, student_name: str, week_offset: int, new_coins: int
     ) -> bool:
         """
-        更新学生周币 / Update student's weekly coins
-        不改变累计币 / Does not change cumulative coins
+        更新学生指定周的币数
+        / Update student's coins for a specific week
+
+        Args:
+            class_id: 班级ID
+            student_name: 学生姓名
+            week_offset: 周偏移量（0=本周，-1=上周，-2=上上周）
+            new_coins: 新的币数
         """
         classroom = self.get_classroom(class_id)
         if not classroom:
@@ -95,10 +128,31 @@ class ClassDataStore:
         if not student:
             return False
 
-        # 更新周币 / Update weekly coins
-        old_weekly = student.weekly_coins
-        student.weekly_coins = max(0, new_weekly_coins)
+        new_coins = max(0, new_coins)
+        target_week = self.current_week + week_offset
+
+        if week_offset == 0:
+            old_value = student.weekly_coins
+            student.weekly_coins = new_coins
+            student.weekly_history[target_week] = new_coins
+        else:
+            old_value = student.weekly_history.get(target_week, 0)
+            student.weekly_history[target_week] = new_coins
+            # 更新累计币：只对历史周生效
+            diff = new_coins - old_value
+            student.cumulative_coins = max(0, student.cumulative_coins + diff)
+
+        self.save_data()
         return True
+
+    def update_student_weekly_coins(
+        self, class_id: str, student_name: str, new_weekly_coins: int
+    ) -> bool:
+        """
+        更新学生本周币数（兼容旧接口）
+        / Update student's current week coins (compatibility wrapper)
+        """
+        return self.update_student_week_coins(class_id, student_name, 0, new_weekly_coins)
 
     def reset_weekly_coins(self, class_id: str) -> bool:
         """
@@ -115,6 +169,7 @@ class ClassDataStore:
             # 重置周币为0 / Reset weekly to 0
             student.weekly_coins = 0
 
+        self.save_data()
         return True
 
     def get_student_coins(self, class_id: str, student_name: str) -> Dict[str, int]:
@@ -142,9 +197,12 @@ class ClassDataStore:
         if not classroom:
             return None
 
-        total_weekly = sum(s.weekly_coins for s in classroom.get_all_students())
+        total_weekly = sum(
+            self.get_student_week_value(student, 0)
+            for student in classroom.get_all_students()
+        )
         total_cumulative = sum(
-            s.cumulative_coins for s in classroom.get_all_students()
+            self.get_student_total(student) for student in classroom.get_all_students()
         )
         student_count = len(classroom.get_all_students())
 
@@ -186,6 +244,7 @@ class ClassDataStore:
         
         classroom = Classroom(name=name, class_id=class_id)
         self.classrooms[class_id] = classroom
+        self.save_data()
         return classroom
 
     def remove_classroom(self, class_id: str) -> bool:
@@ -194,6 +253,7 @@ class ClassDataStore:
         """
         if class_id in self.classrooms:
             del self.classrooms[class_id]
+            self.save_data()
             return True
         return False
 
@@ -204,6 +264,7 @@ class ClassDataStore:
         classroom = self.get_classroom(class_id)
         if classroom:
             classroom.name = new_name
+            self.save_data()
             return True
         return False
 
@@ -217,6 +278,7 @@ class ClassDataStore:
         
         student = Student(name=student_name)
         classroom.add_student(student)
+        self.save_data()
         return True
 
     def remove_student_from_classroom(self, class_id: str, student_name: str) -> bool:
@@ -227,7 +289,10 @@ class ClassDataStore:
         if not classroom:
             return False
         
-        return classroom.remove_student_by_name(student_name)
+        result = classroom.remove_student_by_name(student_name)
+        if result:
+            self.save_data()
+        return result
 
     def update_student_name(self, class_id: str, old_name: str, new_name: str) -> bool:
         """
@@ -242,7 +307,25 @@ class ClassDataStore:
             return False
         
         student.name = new_name
+        self.save_data()
         return True
+
+    def get_student_week_value(self, student: Student, week_offset: int) -> int:
+        """
+        获取学生指定周的币数
+        / Get student's coins for a specific week
+        """
+        target_week = self.current_week + week_offset
+        if week_offset == 0:
+            return student.weekly_coins
+        return student.weekly_history.get(target_week, 0)
+
+    def get_student_total(self, student: Student) -> int:
+        """
+        获取学生总小码币
+        / Get student's total coins
+        """
+        return student.cumulative_coins + student.weekly_coins
 
     def get_week_coins(self, class_id: str, week_offset: int = 0) -> Dict[str, int]:
         """
@@ -254,18 +337,16 @@ class ClassDataStore:
         
         week_coins = {}
         for student in classroom.get_all_students():
-            week_coins[student.name] = student.weekly_history.get(
-                self.current_week + week_offset, 0
-            )
+            week_coins[student.name] = self.get_student_week_value(student, week_offset)
         return week_coins
 
     def get_four_weeks_data(self, class_id: str) -> Dict[int, Dict[str, int]]:
         """
-        获取4周的数据（上周、本周、下周、下下周）
-        / Get 4 weeks of data (last week, this week, next 2 weeks)
+        获取近期三周数据
+        / Get data for recent three weeks (up to current week)
         Returns: {week_offset: {student_name: coins}}
         """
         weeks_data = {}
-        for offset in [-1, 0, 1, 2]:
+        for offset in [-2, -1, 0]:
             weeks_data[offset] = self.get_week_coins(class_id, offset)
         return weeks_data

@@ -3,7 +3,7 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime, timedelta
 
 
@@ -21,7 +21,7 @@ class ClassDetailView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.configure(padding="20", background="white")
+        self.configure(padding="20")
 
         self.current_class_id = None
         self.selected_student = None
@@ -66,12 +66,12 @@ class ClassDetailView(ttk.Frame):
         )
         delete_student_button.pack(side=tk.LEFT, padx=5)
 
-        # 学生列表表格 - 4周显示 / Student roster treeview - 4 weeks display
+        # 学生列表表格 - 3周显示+总计 / Student roster treeview - 3 weeks + total display
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # 创建Treeview / Create Treeview with 5 columns (4 weeks + total)
-        columns = ("name", "week_minus1", "week_0", "week_1", "week_2", "total")
+        # 创建Treeview / Create Treeview with 5 columns (name + 3 weeks + total)
+        columns = ("name", "week_minus2", "week_minus1", "week_0", "total")
         self.tree = ttk.Treeview(
             tree_frame,
             columns=columns,
@@ -84,22 +84,21 @@ class ClassDetailView(ttk.Frame):
         
         # 获取周的日期范围 / Get week date ranges
         week_labels = self._get_week_labels()
-        self.tree.heading("week_minus1", text=f"上一周\n{week_labels[-1]}")
-        self.tree.heading("week_0", text=f"本周\n{week_labels[0]}")
-        self.tree.heading("week_1", text=f"下一周\n{week_labels[1]}")
-        self.tree.heading("week_2", text=f"下下周\n{week_labels[2]}")
+        self.tree.heading("week_minus2", text=f"上上周\n{week_labels[0]}")
+        self.tree.heading("week_minus1", text=f"上周\n{week_labels[1]}")
+        self.tree.heading("week_0", text=f"本周\n{week_labels[2]}")
         self.tree.heading("total", text="总小码币\n累计")
 
         self.tree.column("name", width=150, anchor="w")
-        self.tree.column("week_minus1", width=100, anchor="center")
-        self.tree.column("week_0", width=100, anchor="center")
-        self.tree.column("week_1", width=100, anchor="center")
-        self.tree.column("week_2", width=100, anchor="center")
-        self.tree.column("total", width=100, anchor="center")
+        self.tree.column("week_minus2", width=120, anchor="center")
+        self.tree.column("week_minus1", width=120, anchor="center")
+        self.tree.column("week_0", width=120, anchor="center")
+        self.tree.column("total", width=120, anchor="center")
 
         # 绑定行选择事件和右键菜单 / Bind row selection and right-click menu
         self.tree.bind("<ButtonRelease-1>", self.on_row_selected)
         self.tree.bind("<Button-3>", self.show_student_context_menu)
+        self.tree.bind("<Double-Button-1>", self.on_cell_double_click)
         self.tree.pack(fill=tk.BOTH, expand=True)
 
         # 滚动条 / Scrollbar
@@ -150,19 +149,26 @@ class ClassDetailView(ttk.Frame):
 
     def show_student_context_menu(self, event) -> None:
         """
-        显示学生右键菜单 / Show student context menu
+        显示学生右键菜单（仅在人名列有效）
+        / Show student context menu (only effective in name column)
         """
         # 获取点击位置的学生 / Get student at click position
         item = self.tree.identify_row(event.y)
-        if item:
+        column = self.tree.identify_column(event.x)
+
+        if item and column == "#1":  # 只在第一列（人名列）显示菜单
             self.tree.selection_set(item)
             values = self.tree.item(item, "values")
             student_name = values[0]
-            
+
             context_menu = tk.Menu(self, tearoff=0)
-            context_menu.add_command(label="修改学生姓名", command=lambda: self.edit_student_name())
-            context_menu.add_command(label="删除学生", command=lambda: self.delete_student())
-            
+            context_menu.add_command(
+                label="修改学生姓名", command=lambda: self.edit_student_name()
+            )
+            context_menu.add_command(
+                label="删除学生", command=lambda: self.delete_student()
+            )
+
             try:
                 context_menu.tk_popup(event.x_root, event.y_root)
             finally:
@@ -170,32 +176,31 @@ class ClassDetailView(ttk.Frame):
 
     def _get_week_labels(self) -> list:
         """
-        获取4周的标签 / Get labels for 4 weeks
-        返回: [本周, 下周, 下下周, 上一周]的日期范围
+        获取三周的标签（上上周、上周、本周）
+        / Get labels for three weeks (two previous weeks and current week)
         """
         labels = []
         current_date = datetime.now()
         start_of_week = current_date - timedelta(days=current_date.weekday())
-        
-        # 获取上一周
-        prev_week_start = start_of_week - timedelta(weeks=1)
-        prev_week_end = prev_week_start + timedelta(days=6)
-        labels.append(f"{prev_week_start.strftime('%m/%d')}-{prev_week_end.strftime('%m/%d')}")
-        
-        # 获取本周
-        this_week_end = start_of_week + timedelta(days=6)
-        labels.append(f"{start_of_week.strftime('%m/%d')}-{this_week_end.strftime('%m/%d')}")
-        
-        # 获取下一周
-        next_week_start = start_of_week + timedelta(weeks=1)
-        next_week_end = next_week_start + timedelta(days=6)
-        labels.append(f"{next_week_start.strftime('%m/%d')}-{next_week_end.strftime('%m/%d')}")
-        
-        # 获取下下周
-        next_next_week_start = start_of_week + timedelta(weeks=2)
-        next_next_week_end = next_next_week_start + timedelta(days=6)
-        labels.append(f"{next_next_week_start.strftime('%m/%d')}-{next_next_week_end.strftime('%m/%d')}")
-        
+
+        # 上上周
+        week_minus2_start = start_of_week - timedelta(weeks=2)
+        week_minus2_end = week_minus2_start + timedelta(days=6)
+        labels.append(
+            f"{week_minus2_start.strftime('%m/%d')}-{week_minus2_end.strftime('%m/%d')}"
+        )
+
+        # 上周
+        week_minus1_start = start_of_week - timedelta(weeks=1)
+        week_minus1_end = week_minus1_start + timedelta(days=6)
+        labels.append(
+            f"{week_minus1_start.strftime('%m/%d')}-{week_minus1_end.strftime('%m/%d')}"
+        )
+
+        # 本周
+        week_0_end = start_of_week + timedelta(days=6)
+        labels.append(f"{start_of_week.strftime('%m/%d')}-{week_0_end.strftime('%m/%d')}")
+
         return labels
 
     def load_classroom_data(self, class_id: str) -> None:
@@ -224,8 +229,8 @@ class ClassDetailView(ttk.Frame):
 
     def refresh_student_table(self) -> None:
         """
-        刷新学生表格数据（显示4周）
-        / Refresh the student table with 4 weeks data
+        刷新学生表格数据（显示3周+总计）
+        / Refresh the student table with 3 weeks + total data
         """
         if not self.current_class_id:
             return
@@ -236,31 +241,24 @@ class ClassDetailView(ttk.Frame):
 
         # 加载学生数据 / Load student data
         classroom = self.controller.data_store.get_classroom(self.current_class_id)
+        data_store = self.controller.data_store
         for student in classroom.get_all_students():
-            # 获取4周的币数 / Get coins for 4 weeks
-            week_minus1 = student.weekly_history.get(
-                self.controller.data_store.current_week - 1, 0
-            )
-            week_0 = student.weekly_coins  # 本周使用当前的weekly_coins
-            week_1 = student.weekly_history.get(
-                self.controller.data_store.current_week + 1, 0
-            )
-            week_2 = student.weekly_history.get(
-                self.controller.data_store.current_week + 2, 0
-            )
-            
+            # 获取3周的币数 / Get coins for 3 weeks
+            week_minus2 = data_store.get_student_week_value(student, -2)
+            week_minus1 = data_store.get_student_week_value(student, -1)
+            week_0 = data_store.get_student_week_value(student, 0)
+
             # 计算总小码币数量 / Calculate total coins
-            total = student.cumulative_coins + week_0
-            
+            total = data_store.get_student_total(student)
+
             self.tree.insert(
                 "",
                 "end",
                 values=(
                     student.name,
+                    week_minus2,
                     week_minus1,
                     week_0,
-                    week_1,
-                    week_2,
                     total,
                 ),
             )
@@ -280,10 +278,77 @@ class ClassDetailView(ttk.Frame):
         item = selection[0]
         values = self.tree.item(item, "values")
         self.selected_student = values[0]  # 学生名字 / Student name
-        weekly_coins = int(values[2])  # 本周币数 / This week coins (index 2，因为新增了total列)
+        week_value = values[3]
+        try:
+            weekly_coins = int(week_value)
+        except (TypeError, ValueError):
+            weekly_coins = 0
 
         self.student_display.config(text=self.selected_student)
         self.coins_var.set(str(weekly_coins))
+
+    def on_cell_double_click(self, event) -> None:
+        """
+        处理单元格双击事件 - 编辑币数
+        / Handle cell double-click event - Edit coins
+        """
+        item = self.tree.identify_row(event.y)
+        column = self.tree.identify_column(event.x)
+
+        if not item:
+            return
+
+        values = self.tree.item(item, "values")
+        student_name = values[0]
+
+        # 定义列索引对应的周偏移量
+        column_map = {"#2": -2, "#3": -1, "#4": 0}  # 上上周、上周、本周
+        index_map = {"#2": 1, "#3": 2, "#4": 3}
+
+        if column in column_map:
+            week_offset = column_map[column]
+            value_index = index_map[column]
+            try:
+                current_value = int(values[value_index])
+            except (TypeError, ValueError):
+                current_value = 0
+
+            # 弹出输入对话框
+            new_value = simpledialog.askinteger(
+                "修改小码币",
+                f"修改 {student_name} 的小码币数量\n（当前: {current_value}）",
+                initialvalue=current_value,
+                minvalue=0,
+                maxvalue=1000,
+            )
+
+            if new_value is not None:
+                # 更新数据
+                if self._update_week_coins(student_name, week_offset, new_value):
+                    self.refresh_student_table()
+                    self.update_statistics()
+                    messagebox.showinfo("更新成功", f"已更新 {student_name} 的小码币数量")
+                else:
+                    messagebox.showerror("更新失败", "未能更新小码币，请重试。")
+
+    def _update_week_coins(
+        self, student_name: str, week_offset: int, coins: int
+    ) -> bool:
+        """
+        更新指定周的币数
+        / Update coins for specified week
+
+        Args:
+            student_name: 学生名字
+            week_offset: 周偏移量（-2=上上周，-1=上周，0=本周）
+            coins: 币数
+
+        Returns:
+            bool: 是否更新成功 / Whether the update succeeded
+        """
+        return self.controller.data_store.update_student_week_coins(
+            self.current_class_id, student_name, week_offset, coins
+        )
 
     def update_student_coins(self) -> None:
         """
