@@ -20,7 +20,7 @@ class MainView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.configure(padding="20")
+        self.configure(padding="20", background="white")
         self.frames_dict = {}
 
         # 标题 / Title
@@ -76,6 +76,10 @@ class MainView(ttk.Frame):
                 width=20,
             )
             button.grid(row=button_row, column=button_col, padx=5, pady=5, sticky="nsew")
+            
+            # 绑定右键菜单 / Bind right-click menu
+            button.bind("<Button-3>", lambda e, cid=classroom.class_id: self.show_context_menu(e, cid))
+            
             self.class_buttons[classroom.class_id] = button
 
             button_col += 1
@@ -115,6 +119,47 @@ class MainView(ttk.Frame):
         )
         logout_button.pack(side=tk.LEFT, padx=5)
 
+        # 全屏切换 / Toggle fullscreen
+        fullscreen_button = ttk.Button(
+            button_frame, text="切换全屏", command=self.toggle_fullscreen
+        )
+        fullscreen_button.pack(side=tk.LEFT, padx=5)
+
+    def show_context_menu(self, event, class_id: str) -> None:
+        """
+        显示班级右键菜单 / Show classroom context menu
+        """
+        context_menu = tk.Menu(self, tearoff=0)
+        context_menu.add_command(label="修改班级名字", command=lambda: self.edit_classroom_by_id(class_id))
+        context_menu.add_command(label="删除班级", command=lambda: self.delete_classroom_by_id(class_id))
+        
+        try:
+            context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            context_menu.grab_release()
+
+    def edit_classroom_by_id(self, class_id: str) -> None:
+        """
+        根据ID修改班级名字 / Edit classroom name by ID
+        """
+        self.selected_class_var.set(class_id)
+        classroom = self.controller.data_store.get_classroom(class_id)
+        self.selection_display.config(
+            text=f"已选择: {classroom.name} ({len(classroom.students)}名学生)"
+        )
+        self.edit_classroom()
+
+    def delete_classroom_by_id(self, class_id: str) -> None:
+        """
+        根据ID删除班级 / Delete classroom by ID
+        """
+        self.selected_class_var.set(class_id)
+        classroom = self.controller.data_store.get_classroom(class_id)
+        self.selection_display.config(
+            text=f"已选择: {classroom.name} ({len(classroom.students)}名学生)"
+        )
+        self.delete_classroom()
+
     def on_class_selected(self, class_id: str) -> None:
         """
         处理班级选择
@@ -144,6 +189,16 @@ class MainView(ttk.Frame):
 
         self.controller.set_current_classroom(class_id)
         self.controller.show_frame("ClassDetailView")
+
+    def toggle_fullscreen(self) -> None:
+        """
+        切换全屏模式 / Toggle fullscreen mode
+        """
+        current_state = self.controller.state()
+        if current_state == 'zoomed':
+            self.controller.state('normal')
+        else:
+            self.controller.state('zoomed')
 
     def logout(self) -> None:
         """
@@ -191,6 +246,10 @@ class MainView(ttk.Frame):
                 width=20,
             )
             button.grid(row=button_row, column=button_col, padx=5, pady=5, sticky="nsew")
+            
+            # 绑定右键菜单 / Bind right-click menu
+            button.bind("<Button-3>", lambda e, cid=classroom.class_id: self.show_context_menu(e, cid))
+            
             self.class_buttons[classroom.class_id] = button
 
             button_col += 1

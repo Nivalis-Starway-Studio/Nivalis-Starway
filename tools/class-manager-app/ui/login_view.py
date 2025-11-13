@@ -4,6 +4,7 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter import Canvas
 
 
 class LoginView(ttk.Frame):
@@ -22,16 +23,26 @@ class LoginView(ttk.Frame):
         self.controller = controller
 
         # 设置样式 / Set style
-        self.configure(padding="20")
+        self.configure(padding="20", background="white")
 
-        # 标题 - 西瓜老师 / Title - XiguaTeacher
-        title_label = ttk.Label(
-            self, text="西瓜老师", font=("Arial", 32, "bold"), foreground="#4CAF50"
-        )
-        title_label.pack(pady=(20, 40))
+        # 创建渐变色标题 - 西瓜老师 / Create gradient title - XiguaTeacher
+        title_canvas = Canvas(self, width=400, height=80, bg="white", highlightthickness=0)
+        title_canvas.pack(pady=(20, 40))
+        
+        # 绘制渐变色文字 / Draw gradient text
+        colors = ["#2E7D32", "#388E3C", "#43A047", "#4CAF50", "#66BB6A", "#81C784"]
+        text = "西瓜老师"
+        font_size = 32
+        
+        for i, char in enumerate(text):
+            x = 80 + i * 50
+            y = 40
+            color = colors[i % len(colors)]
+            title_canvas.create_text(x, y, text=char, font=("Arial", font_size, "bold"), 
+                                   fill=color, anchor="center")
 
         # 账号输入框 / Username input
-        username_frame = ttk.Frame(self)
+        username_frame = ttk.Frame(self, style="TFrame")
         username_frame.pack(fill=tk.X, pady=15)
 
         username_label = ttk.Label(username_frame, text="账号", font=("Arial", 11))
@@ -43,7 +54,7 @@ class LoginView(ttk.Frame):
         self.username_entry.focus()
 
         # 密码输入框 / Password input
-        password_frame = ttk.Frame(self)
+        password_frame = ttk.Frame(self, style="TFrame")
         password_frame.pack(fill=tk.X, pady=15)
 
         password_label = ttk.Label(password_frame, text="密码", font=("Arial", 11))
@@ -59,7 +70,7 @@ class LoginView(ttk.Frame):
         self.password_entry.bind("<Return>", lambda e: self.login())
 
         # 登录按钮 / Login button - 居中显示
-        button_frame = ttk.Frame(self)
+        button_frame = ttk.Frame(self, style="TFrame")
         button_frame.pack(pady=30)
 
         login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
