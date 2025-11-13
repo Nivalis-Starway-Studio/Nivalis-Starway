@@ -1,5 +1,5 @@
 """
-班级详情视图 / Class detail view for managing student coins and 4-week display
+班级详情视图 / Class detail view for managing student coins and 3-week display
 """
 
 import tkinter as tk
@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 
 
-class ClassDetailView(ttk.Frame):
+class ClassDetailView(tk.Frame):
     """班级详情视图框架 / Class detail view frame"""
 
     def __init__(self, parent, controller, **kwargs):
@@ -21,7 +21,7 @@ class ClassDetailView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.configure(padding="20", background="white")
+        self.configure(bg="white", padx=20, pady=20)
 
         self.current_class_id = None
         self.selected_student = None
@@ -66,12 +66,12 @@ class ClassDetailView(ttk.Frame):
         )
         delete_student_button.pack(side=tk.LEFT, padx=5)
 
-        # 学生列表表格 - 4周显示 / Student roster treeview - 4 weeks display
+        # 学生列表表格 - 3周显示 / Student roster treeview - 3 weeks display
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # 创建Treeview / Create Treeview with 5 columns (4 weeks + total)
-        columns = ("name", "week_minus1", "week_0", "week_1", "week_2", "total")
+        # 创建Treeview / Create Treeview with 4 columns (3 weeks + total)
+        columns = ("name", "week_minus1", "week_0", "week_1", "total")
         self.tree = ttk.Treeview(
             tree_frame,
             columns=columns,
@@ -84,17 +84,15 @@ class ClassDetailView(ttk.Frame):
         
         # 获取周的日期范围 / Get week date ranges
         week_labels = self._get_week_labels()
-        self.tree.heading("week_minus1", text=f"上一周\n{week_labels[-1]}")
-        self.tree.heading("week_0", text=f"本周\n{week_labels[0]}")
-        self.tree.heading("week_1", text=f"下一周\n{week_labels[1]}")
-        self.tree.heading("week_2", text=f"下下周\n{week_labels[2]}")
+        self.tree.heading("week_minus1", text=f"上上周\n{week_labels[-2]}")
+        self.tree.heading("week_0", text=f"上一周\n{week_labels[-1]}")
+        self.tree.heading("week_1", text=f"本周\n{week_labels[0]}")
         self.tree.heading("total", text="总小码币\n累计")
 
         self.tree.column("name", width=150, anchor="w")
         self.tree.column("week_minus1", width=100, anchor="center")
         self.tree.column("week_0", width=100, anchor="center")
         self.tree.column("week_1", width=100, anchor="center")
-        self.tree.column("week_2", width=100, anchor="center")
         self.tree.column("total", width=100, anchor="center")
 
         # 绑定行选择事件和右键菜单 / Bind row selection and right-click menu
@@ -150,11 +148,15 @@ class ClassDetailView(ttk.Frame):
 
     def show_student_context_menu(self, event) -> None:
         """
-        显示学生右键菜单 / Show student context menu
+        显示学生右键菜单 - 仅在学生名字列有效
+        / Show student context menu - only in student name column
         """
-        # 获取点击位置的学生 / Get student at click position
+        # 获取点击位置的行和列 / Get row and column at click position
         item = self.tree.identify_row(event.y)
-        if item:
+        column = self.tree.identify_column(event.x)
+        
+        # 只在名字列（column 0）显示菜单 / Only show menu on name column (#0 or 0)
+        if item and (column == "#1" or column == "0" or column == "#0"):
             self.tree.selection_set(item)
             values = self.tree.item(item, "values")
             student_name = values[0]
@@ -170,12 +172,18 @@ class ClassDetailView(ttk.Frame):
 
     def _get_week_labels(self) -> list:
         """
-        获取4周的标签 / Get labels for 4 weeks
-        返回: [本周, 下周, 下下周, 上一周]的日期范围
+        获取5周的标签 / Get labels for 5 weeks
+        返回: [本周, 下周, 下下周, 上一周, 上上周]的日期范围
+        索引: [-2: 上上周, -1: 上一周, 0: 本周, 1: 下一周, 2: 下下周]
         """
         labels = []
         current_date = datetime.now()
         start_of_week = current_date - timedelta(days=current_date.weekday())
+        
+        # 获取上上周
+        prev_prev_week_start = start_of_week - timedelta(weeks=2)
+        prev_prev_week_end = prev_prev_week_start + timedelta(days=6)
+        labels.append(f"{prev_prev_week_start.strftime('%m/%d')}-{prev_prev_week_end.strftime('%m/%d')}")
         
         # 获取上一周
         prev_week_start = start_of_week - timedelta(weeks=1)
@@ -224,8 +232,8 @@ class ClassDetailView(ttk.Frame):
 
     def refresh_student_table(self) -> None:
         """
-        刷新学生表格数据（显示4周）
-        / Refresh the student table with 4 weeks data
+        刷新学生表格数据（显示3周+总计）
+        / Refresh the student table with 3 weeks data plus total
         """
         if not self.current_class_id:
             return
@@ -237,30 +245,26 @@ class ClassDetailView(ttk.Frame):
         # 加载学生数据 / Load student data
         classroom = self.controller.data_store.get_classroom(self.current_class_id)
         for student in classroom.get_all_students():
-            # 获取4周的币数 / Get coins for 4 weeks
+            # 获取3周的币数 / Get coins for 3 weeks
+            week_minus2 = student.weekly_history.get(
+                self.controller.data_store.current_week - 2, 0
+            )
             week_minus1 = student.weekly_history.get(
                 self.controller.data_store.current_week - 1, 0
             )
             week_0 = student.weekly_coins  # 本周使用当前的weekly_coins
-            week_1 = student.weekly_history.get(
-                self.controller.data_store.current_week + 1, 0
-            )
-            week_2 = student.weekly_history.get(
-                self.controller.data_store.current_week + 2, 0
-            )
-            
+
             # 计算总小码币数量 / Calculate total coins
             total = student.cumulative_coins + week_0
-            
+
             self.tree.insert(
                 "",
                 "end",
                 values=(
                     student.name,
+                    week_minus2,
                     week_minus1,
                     week_0,
-                    week_1,
-                    week_2,
                     total,
                 ),
             )
@@ -280,7 +284,7 @@ class ClassDetailView(ttk.Frame):
         item = selection[0]
         values = self.tree.item(item, "values")
         self.selected_student = values[0]  # 学生名字 / Student name
-        weekly_coins = int(values[2])  # 本周币数 / This week coins (index 2，因为新增了total列)
+        weekly_coins = int(values[3])  # 本周币数 / This week coins (index 3: week_0)
 
         self.student_display.config(text=self.selected_student)
         self.coins_var.set(str(weekly_coins))

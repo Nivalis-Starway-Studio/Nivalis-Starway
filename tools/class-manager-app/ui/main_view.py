@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 
-class MainView(ttk.Frame):
+class MainView(tk.Frame):
     """主视图框架 / Main view frame for displaying all classrooms"""
 
     def __init__(self, parent, controller, **kwargs):
@@ -20,7 +20,7 @@ class MainView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.configure(padding="20", background="white")
+        self.configure(bg="white", padx=20, pady=20)
         self.frames_dict = {}
 
         # 标题 / Title
@@ -162,20 +162,14 @@ class MainView(ttk.Frame):
 
     def on_class_selected(self, class_id: str) -> None:
         """
-        处理班级选择
-        / Handle classroom selection
-        
+        处理班级选择 - 直接进入班级详情页
+        / Handle classroom selection - directly enter detail view
+
         Args:
             class_id: 班级ID / Classroom ID
         """
-        self.selected_class_var.set(class_id)
-        classroom = self.controller.data_store.get_classroom(class_id)
-        self.selection_display.config(
-            text=f"已选择: {classroom.name} ({len(classroom.students)}名学生)"
-        )
-        messagebox.showinfo(
-            "班级已选择", f"已选择班级: {classroom.name}\n\n点击'进入班级'按钮查看详情。"
-        )
+        self.controller.set_current_classroom(class_id)
+        self.controller.show_frame("ClassDetailView")
 
     def enter_class_detail(self) -> None:
         """
@@ -213,7 +207,6 @@ class MainView(ttk.Frame):
         """重置主视图 / Reset main view"""
         self.selected_class_var.set("")
         self.selection_display.config(text="未选择班级")
-        self.refresh_classrooms()
 
     def refresh_classrooms(self) -> None:
         """

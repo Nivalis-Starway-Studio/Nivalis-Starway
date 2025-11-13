@@ -4,10 +4,9 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from tkinter import Canvas
 
 
-class LoginView(ttk.Frame):
+class LoginView(tk.Frame):
     """登录视图框架 / Login view frame"""
 
     def __init__(self, parent, controller, **kwargs):
@@ -23,10 +22,10 @@ class LoginView(ttk.Frame):
         self.controller = controller
 
         # 设置样式 / Set style
-        self.configure(padding="20", background="white")
+        self.configure(bg="white", padx=20, pady=20)
 
         # 创建渐变色标题 - 西瓜老师 / Create gradient title - XiguaTeacher
-        title_canvas = Canvas(self, width=400, height=80, bg="white", highlightthickness=0)
+        title_canvas = tk.Canvas(self, width=400, height=80, bg="white", highlightthickness=0)
         title_canvas.pack(pady=(20, 40))
         
         # 绘制渐变色文字 / Draw gradient text
@@ -42,10 +41,10 @@ class LoginView(ttk.Frame):
                                    fill=color, anchor="center")
 
         # 账号输入框 / Username input
-        username_frame = ttk.Frame(self, style="TFrame")
+        username_frame = tk.Frame(self, bg="white")
         username_frame.pack(fill=tk.X, pady=15)
 
-        username_label = ttk.Label(username_frame, text="账号", font=("Arial", 11))
+        username_label = tk.Label(username_frame, text="账号", font=("Arial", 11), bg="white", fg="black")
         username_label.pack(side=tk.LEFT, padx=(0, 15))
 
         self.username_var = tk.StringVar()
@@ -54,10 +53,10 @@ class LoginView(ttk.Frame):
         self.username_entry.focus()
 
         # 密码输入框 / Password input
-        password_frame = ttk.Frame(self, style="TFrame")
+        password_frame = tk.Frame(self, bg="white")
         password_frame.pack(fill=tk.X, pady=15)
 
-        password_label = ttk.Label(password_frame, text="密码", font=("Arial", 11))
+        password_label = tk.Label(password_frame, text="密码", font=("Arial", 11), bg="white", fg="black")
         password_label.pack(side=tk.LEFT, padx=(0, 15))
 
         self.password_var = tk.StringVar()
@@ -70,18 +69,19 @@ class LoginView(ttk.Frame):
         self.password_entry.bind("<Return>", lambda e: self.login())
 
         # 登录按钮 / Login button - 居中显示
-        button_frame = ttk.Frame(self, style="TFrame")
+        button_frame = tk.Frame(self, bg="white")
         button_frame.pack(pady=30)
 
         login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
         login_button.pack(side=tk.LEFT, padx=5)
 
         # 底部说明 / Footer text
-        info_label = ttk.Label(
+        info_label = tk.Label(
             self,
             text="演示账号：xigua / 123456",
-            foreground="gray",
+            fg="gray",
             font=("Arial", 10),
+            bg="white"
         )
         info_label.pack(pady=(30, 0))
 
@@ -98,7 +98,7 @@ class LoginView(ttk.Frame):
             self.controller.show_frame("MainView")
         else:
             messagebox.showerror(
-                "登录失败", "用户名或密码错误，请重试。\n正确的账号为 xigua / 123456"
+                "登录失败", "用户名或密码错误，请重试。"
             )
             self.username_var.set("")
             self.password_var.set("")

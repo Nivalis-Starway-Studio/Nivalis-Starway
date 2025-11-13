@@ -6,6 +6,7 @@ Data store and business logic for classroom management
 from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 from .models import Classroom, Student
+from .excel_storage import ExcelStorage
 
 
 class ClassDataStore:
@@ -15,7 +16,24 @@ class ClassDataStore:
         """初始化数据存储 / Initialize the data store"""
         self.classrooms: Dict[str, Classroom] = {}
         self.current_week = self._get_current_week()
-        self._load_sample_data()
+        self.excel_storage = ExcelStorage()
+        # 尝试从 Excel 加载数据，如果没有则使用示例数据
+        # Try to load from Excel, otherwise use sample data
+        self._load_from_storage()
+
+    def _load_from_storage(self) -> None:
+         """
+         从 Excel 加载数据，如果不存在则加载示例数据
+         / Load from Excel, or load sample data if not exists
+         """
+         if self.excel_storage.available:
+             loaded = self.excel_storage.load_classrooms()
+             if loaded:
+                 self.classrooms = loaded
+                 return
+         
+         # 如果 Excel 加载失败或不可用，加载示例数据 / Load sample data if Excel unavailable
+         self._load_sample_data()
 
     def _load_sample_data(self) -> None:
         """加载示例数据 / Load sample data with seven classes"""
@@ -98,6 +116,7 @@ class ClassDataStore:
         # 更新周币 / Update weekly coins
         old_weekly = student.weekly_coins
         student.weekly_coins = max(0, new_weekly_coins)
+        self.save_to_storage()  # 保存到 Excel / Save to Excel
         return True
 
     def reset_weekly_coins(self, class_id: str) -> bool:
@@ -115,6 +134,7 @@ class ClassDataStore:
             # 重置周币为0 / Reset weekly to 0
             student.weekly_coins = 0
 
+        self.save_to_storage()  # 保存到 Excel / Save to Excel
         return True
 
     def get_student_coins(self, class_id: str, student_name: str) -> Dict[str, int]:
@@ -180,12 +200,13 @@ class ClassDataStore:
         """
         if class_id is None:
             class_id = f"class_{len(self.classrooms)}_{datetime.now().timestamp()}"
-        
+
         if class_id in self.classrooms:
             return None
-        
+
         classroom = Classroom(name=name, class_id=class_id)
         self.classrooms[class_id] = classroom
+        self.save_to_storage()  # 保存到 Excel / Save to Excel
         return classroom
 
     def remove_classroom(self, class_id: str) -> bool:
@@ -194,6 +215,7 @@ class ClassDataStore:
         """
         if class_id in self.classrooms:
             del self.classrooms[class_id]
+            self.save_to_storage()  # 保存到 Excel / Save to Excel
             return True
         return False
 
@@ -204,6 +226,7 @@ class ClassDataStore:
         classroom = self.get_classroom(class_id)
         if classroom:
             classroom.name = new_name
+            self.save_to_storage()  # 保存到 Excel / Save to Excel
             return True
         return False
 
@@ -214,9 +237,10 @@ class ClassDataStore:
         classroom = self.get_classroom(class_id)
         if not classroom:
             return False
-        
+
         student = Student(name=student_name)
         classroom.add_student(student)
+        self.save_to_storage()  # 保存到 Excel / Save to Excel
         return True
 
     def remove_student_from_classroom(self, class_id: str, student_name: str) -> bool:
@@ -226,8 +250,11 @@ class ClassDataStore:
         classroom = self.get_classroom(class_id)
         if not classroom:
             return False
-        
-        return classroom.remove_student_by_name(student_name)
+
+        result = classroom.remove_student_by_name(student_name)
+        if result:
+            self.save_to_storage()  # 保存到 Excel / Save to Excel
+        return result
 
     def update_student_name(self, class_id: str, old_name: str, new_name: str) -> bool:
         """
@@ -236,12 +263,13 @@ class ClassDataStore:
         classroom = self.get_classroom(class_id)
         if not classroom:
             return False
-        
+
         student = classroom.get_student_by_name(old_name)
         if not student:
             return False
-        
+
         student.name = new_name
+        self.save_to_storage()  # 保存到 Excel / Save to Excel
         return True
 
     def get_week_coins(self, class_id: str, week_offset: int = 0) -> Dict[str, int]:
@@ -260,12 +288,21 @@ class ClassDataStore:
         return week_coins
 
     def get_four_weeks_data(self, class_id: str) -> Dict[int, Dict[str, int]]:
-        """
-        获取4周的数据（上周、本周、下周、下下周）
-        / Get 4 weeks of data (last week, this week, next 2 weeks)
-        Returns: {week_offset: {student_name: coins}}
-        """
-        weeks_data = {}
-        for offset in [-1, 0, 1, 2]:
-            weeks_data[offset] = self.get_week_coins(class_id, offset)
-        return weeks_data
+         """
+         获取4周的数据（上周、本周、下周、下下周）
+         / Get 4 weeks of data (last week, this week, next 2 weeks)
+         Returns: {week_offset: {student_name: coins}}
+         """
+         weeks_data = {}
+         for offset in [-1, 0, 1, 2]:
+             weeks_data[offset] = self.get_week_coins(class_id, offset)
+         return weeks_data
+
+    def save_to_storage(self) -> bool:
+         """
+         保存数据到 Excel
+         / Save data to Excel
+         """
+         if self.excel_storage.available:
+             return self.excel_storage.save_classrooms(self.classrooms)
+         return False
