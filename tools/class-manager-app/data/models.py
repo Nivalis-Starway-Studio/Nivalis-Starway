@@ -4,15 +4,15 @@ Data models for the classroom manager application
 """
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 
 
 @dataclass
 class Student:
     """学生模型 / Student model"""
     name: str
-    weekly_coins: int = 0
     cumulative_coins: int = 0
+    week_coins: Dict[int, int] = field(default_factory=dict)  # 周数 -> 币数
 
 
 @dataclass

@@ -26,3 +26,6 @@ __pycache__/
 .venv
 venv/
 ENV/
+
+# Classroom Manager App data (optional: remove to track Excel files)
+# tools/class-manager-app/classroom_data.xlsx
