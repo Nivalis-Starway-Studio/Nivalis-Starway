@@ -50,6 +50,8 @@ class LoginView(tk.Frame):
         self.username_var = tk.StringVar()
         self.username_entry = ttk.Entry(username_frame, textvariable=self.username_var, width=30)
         self.username_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # 设置为英文输入模式 / Set to English input mode
+        self.username_entry.config(insertwidth=2)
         self.username_entry.focus()
 
         # 密码输入框 / Password input
@@ -75,15 +77,15 @@ class LoginView(tk.Frame):
         login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
         login_button.pack(side=tk.LEFT, padx=5)
 
-        # 底部说明 / Footer text
-        info_label = tk.Label(
-            self,
-            text="演示账号：xigua / 123456",
-            fg="gray",
-            font=("Arial", 10),
-            bg="white"
-        )
-        info_label.pack(pady=(30, 0))
+        # 底部说明 / Footer text (隐藏测试账号 / Hidden demo credentials)
+        # info_label = tk.Label(
+        #     self,
+        #     text="演示账号：xigua / 123456",
+        #     fg="gray",
+        #     font=("Arial", 10),
+        #     bg="white"
+        # )
+        # info_label.pack(pady=(30, 0))
 
     def login(self) -> None:
         """
