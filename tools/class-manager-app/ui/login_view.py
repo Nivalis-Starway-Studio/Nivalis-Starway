@@ -22,24 +22,35 @@ class LoginView(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.controller = controller
 
-        # 设置样式 / Set style
-        self.configure(padding="20", background="white")
+        # 设置样式 / Set style (ttk.Frame不支持background参数)
+        self.configure(padding="20")
 
         # 创建渐变色标题 - 西瓜老师 / Create gradient title - XiguaTeacher
-        title_canvas = Canvas(self, width=400, height=80, bg="white", highlightthickness=0)
-        title_canvas.pack(pady=(20, 40))
+        self.title_canvas = Canvas(self, width=400, height=80, bg="white", highlightthickness=0)
+        self.title_canvas.pack(pady=(20, 40))
         
         # 绘制渐变色文字 / Draw gradient text
-        colors = ["#2E7D32", "#388E3C", "#43A047", "#4CAF50", "#66BB6A", "#81C784"]
+        self._gradient_colors = ["#2E7D32", "#388E3C", "#43A047", "#4CAF50", "#66BB6A", "#81C784"]
         text = "西瓜老师"
         font_size = 32
+        self._title_items = []
         
         for i, char in enumerate(text):
             x = 80 + i * 50
             y = 40
-            color = colors[i % len(colors)]
-            title_canvas.create_text(x, y, text=char, font=("Arial", font_size, "bold"), 
-                                   fill=color, anchor="center")
+            color = self._gradient_colors[i % len(self._gradient_colors)]
+            item = self.title_canvas.create_text(
+                x,
+                y,
+                text=char,
+                font=("Arial", font_size, "bold"),
+                fill=color,
+                anchor="center",
+            )
+            self._title_items.append(item)
+        
+        # 启动标题渐变动画
+        self.after(120, self._animate_title_gradient)
 
         # 账号输入框 / Username input
         username_frame = ttk.Frame(self, style="TFrame")
@@ -66,6 +77,11 @@ class LoginView(ttk.Frame):
         )
         self.password_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
+        # 输入内容仅允许英文字符 / Restrict input to ASCII characters
+        vcmd = (self.register(self._validate_ascii), "%P")
+        self.username_entry.configure(validate="key", validatecommand=vcmd)
+        self.password_entry.configure(validate="key", validatecommand=vcmd)
+
         # 绑定回车键 / Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self.login())
 
@@ -76,14 +92,27 @@ class LoginView(ttk.Frame):
         login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
         login_button.pack(side=tk.LEFT, padx=5)
 
-        # 底部说明 / Footer text
-        info_label = ttk.Label(
-            self,
-            text="演示账号：xigua / 123456",
-            foreground="gray",
-            font=("Arial", 10),
-        )
-        info_label.pack(pady=(30, 0))
+    def _validate_ascii(self, text: str) -> bool:
+        """验证输入只包含ASCII字符 / Validate input contains only ASCII characters"""
+        if not text:
+            return True
+        return all(ord(char) < 128 for char in text)
+
+    def _animate_title_gradient(self) -> None:
+        """标题渐变动画 / Animate title gradient"""
+        if not self.winfo_exists():
+            return
+        
+        # 旋转颜色数组 / Rotate color array
+        self._gradient_colors = self._gradient_colors[1:] + [self._gradient_colors[0]]
+        
+        # 更新每个字符的颜色 / Update each character's color
+        for i, item in enumerate(self._title_items):
+            color = self._gradient_colors[i % len(self._gradient_colors)]
+            self.title_canvas.itemconfig(item, fill=color)
+        
+        # 继续动画 / Continue animation
+        self.after(300, self._animate_title_gradient)
 
     def login(self) -> None:
         """
@@ -98,7 +127,7 @@ class LoginView(ttk.Frame):
             self.controller.show_frame("MainView")
         else:
             messagebox.showerror(
-                "登录失败", "用户名或密码错误，请重试。\n正确的账号为 xigua / 123456"
+                "登录失败", "用户名或密码错误，请重试。"
             )
             self.username_var.set("")
             self.password_var.set("")

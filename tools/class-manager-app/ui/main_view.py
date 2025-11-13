@@ -20,8 +20,7 @@ class MainView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.configure(padding="20", background="white")
-        self.frames_dict = {}
+        self.configure(padding="20")
 
         # 标题 / Title
         title_label = ttk.Label(
@@ -53,45 +52,14 @@ class MainView(ttk.Frame):
         delete_class_button.pack(side=tk.LEFT, padx=5)
 
         # 班级选择区域 / Classroom selection area
-        selection_frame = ttk.Frame(self)
-        selection_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        self.selection_frame = ttk.Frame(self)
+        self.selection_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        self._max_cols = 3
+        self._last_row_count = 0
 
         self.selected_class_var = tk.StringVar()
-
-        # 创建班级按钮 / Create classroom buttons
         self.class_buttons = {}
-        button_row = 0
-        button_col = 0
-        max_cols = 3
-
-        classrooms = self.controller.data_store.get_all_classrooms()
-        for classroom in classrooms:
-            # 创建按钮 / Create button for each classroom
-            button = ttk.Button(
-                selection_frame,
-                text=f"{classroom.name}\n({len(classroom.students)}名学生)",
-                command=lambda class_id=classroom.class_id: self.on_class_selected(
-                    class_id
-                ),
-                width=20,
-            )
-            button.grid(row=button_row, column=button_col, padx=5, pady=5, sticky="nsew")
-            
-            # 绑定右键菜单 / Bind right-click menu
-            button.bind("<Button-3>", lambda e, cid=classroom.class_id: self.show_context_menu(e, cid))
-            
-            self.class_buttons[classroom.class_id] = button
-
-            button_col += 1
-            if button_col >= max_cols:
-                button_col = 0
-                button_row += 1
-
-        # 配置网格权重 / Configure grid weights
-        for i in range(button_row + 1):
-            selection_frame.rowconfigure(i, weight=1)
-        for j in range(max_cols):
-            selection_frame.columnconfigure(j, weight=1)
+        self._populate_classroom_buttons()
 
         # 底部控制区域 / Bottom control area
         control_frame = ttk.Frame(self)
@@ -124,6 +92,66 @@ class MainView(ttk.Frame):
             button_frame, text="切换全屏", command=self.toggle_fullscreen
         )
         fullscreen_button.pack(side=tk.LEFT, padx=5)
+
+    def _populate_classroom_buttons(self) -> None:
+        """
+        填充班级按钮 / Populate classroom buttons
+        """
+        # 清空现有网格
+        for child in self.selection_frame.grid_slaves():
+            child.destroy()
+
+        # 重置之前的权重配置
+        for index in range(self._last_row_count):
+            self.selection_frame.rowconfigure(index, weight=0)
+        for index in range(self._max_cols):
+            self.selection_frame.columnconfigure(index, weight=0)
+
+        self.class_buttons.clear()
+
+        classrooms = self.controller.data_store.get_all_classrooms()
+        if not classrooms:
+            empty_label = ttk.Label(self.selection_frame, text="暂无班级，请先创建。")
+            empty_label.grid(row=0, column=0, padx=10, pady=10)
+            self._last_row_count = 1
+            return
+
+        button_row = 0
+        button_col = 0
+
+        for classroom in classrooms:
+            # 创建按钮 / Create button for each classroom
+            button = ttk.Button(
+                self.selection_frame,
+                text=f"{classroom.name}\n({len(classroom.students)}名学生)",
+                command=lambda class_id=classroom.class_id: self.on_class_selected(
+                    class_id
+                ),
+                width=20,
+            )
+            button.grid(row=button_row, column=button_col, padx=5, pady=5, sticky="nsew")
+
+            # 绑定右键菜单 / Bind right-click menu
+            button.bind(
+                "<Button-3>",
+                lambda e, cid=classroom.class_id: self.show_context_menu(e, cid),
+            )
+
+            self.class_buttons[classroom.class_id] = button
+
+            button_col += 1
+            if button_col >= self._max_cols:
+                button_col = 0
+                button_row += 1
+
+        # 配置网格权重 / Configure grid weights
+        row_count = button_row + 1
+        for i in range(row_count):
+            self.selection_frame.rowconfigure(i, weight=1)
+        for j in range(self._max_cols):
+            self.selection_frame.columnconfigure(j, weight=1)
+
+        self._last_row_count = row_count
 
     def show_context_menu(self, event, class_id: str) -> None:
         """
@@ -162,8 +190,8 @@ class MainView(ttk.Frame):
 
     def on_class_selected(self, class_id: str) -> None:
         """
-        处理班级选择
-        / Handle classroom selection
+        处理班级选择 - 直接进入班级详情页
+        / Handle classroom selection - Directly enter class detail page
         
         Args:
             class_id: 班级ID / Classroom ID
@@ -173,9 +201,9 @@ class MainView(ttk.Frame):
         self.selection_display.config(
             text=f"已选择: {classroom.name} ({len(classroom.students)}名学生)"
         )
-        messagebox.showinfo(
-            "班级已选择", f"已选择班级: {classroom.name}\n\n点击'进入班级'按钮查看详情。"
-        )
+        # 直接进入班级详情页 / Directly enter class detail page
+        self.controller.set_current_classroom(class_id)
+        self.controller.show_frame("ClassDetailView")
 
     def enter_class_detail(self) -> None:
         """
@@ -219,48 +247,7 @@ class MainView(ttk.Frame):
         """
         刷新班级按钮显示 / Refresh classroom buttons display
         """
-        for item in self.frames_dict.values():
-            item.destroy()
-        
-        self.frames_dict = {}
-        selection_frame = self.winfo_children()[2]
-        for widget in selection_frame.winfo_children():
-            widget.destroy()
-        
-        selection_frame.rowconfigure(0, weight=1)
-        selection_frame.columnconfigure(0, weight=1)
-        
-        button_row = 0
-        button_col = 0
-        max_cols = 3
-
-        classrooms = self.controller.data_store.get_all_classrooms()
-        self.class_buttons = {}
-        for classroom in classrooms:
-            button = ttk.Button(
-                selection_frame,
-                text=f"{classroom.name}\n({len(classroom.students)}名学生)",
-                command=lambda class_id=classroom.class_id: self.on_class_selected(
-                    class_id
-                ),
-                width=20,
-            )
-            button.grid(row=button_row, column=button_col, padx=5, pady=5, sticky="nsew")
-            
-            # 绑定右键菜单 / Bind right-click menu
-            button.bind("<Button-3>", lambda e, cid=classroom.class_id: self.show_context_menu(e, cid))
-            
-            self.class_buttons[classroom.class_id] = button
-
-            button_col += 1
-            if button_col >= max_cols:
-                button_col = 0
-                button_row += 1
-
-        for i in range(button_row + 1):
-            selection_frame.rowconfigure(i, weight=1)
-        for j in range(max_cols):
-            selection_frame.columnconfigure(j, weight=1)
+        self._populate_classroom_buttons()
 
     def add_classroom(self) -> None:
         """
