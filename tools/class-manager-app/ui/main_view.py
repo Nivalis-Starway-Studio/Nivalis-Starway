@@ -21,6 +21,7 @@ class MainView(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.controller = controller
         self.configure(padding="20")
+        self.frames_dict = {}
 
         # 标题 / Title
         title_label = ttk.Label(
@@ -31,6 +32,25 @@ class MainView(ttk.Frame):
         # 说明文本 / Description
         description_label = ttk.Label(self, text="请选择要管理的班级：")
         description_label.pack(fill=tk.X, pady=(0, 15))
+
+        # 班级管理按钮 / Classroom management buttons
+        management_frame = ttk.Frame(self)
+        management_frame.pack(fill=tk.X, pady=(0, 10))
+
+        add_class_button = ttk.Button(
+            management_frame, text="添加班级", command=self.add_classroom
+        )
+        add_class_button.pack(side=tk.LEFT, padx=5)
+
+        edit_class_button = ttk.Button(
+            management_frame, text="修改班级", command=self.edit_classroom
+        )
+        edit_class_button.pack(side=tk.LEFT, padx=5)
+
+        delete_class_button = ttk.Button(
+            management_frame, text="删除班级", command=self.delete_classroom
+        )
+        delete_class_button.pack(side=tk.LEFT, padx=5)
 
         # 班级选择区域 / Classroom selection area
         selection_frame = ttk.Frame(self)
@@ -138,3 +158,140 @@ class MainView(ttk.Frame):
         """重置主视图 / Reset main view"""
         self.selected_class_var.set("")
         self.selection_display.config(text="未选择班级")
+        self.refresh_classrooms()
+
+    def refresh_classrooms(self) -> None:
+        """
+        刷新班级按钮显示 / Refresh classroom buttons display
+        """
+        for item in self.frames_dict.values():
+            item.destroy()
+        
+        self.frames_dict = {}
+        selection_frame = self.winfo_children()[2]
+        for widget in selection_frame.winfo_children():
+            widget.destroy()
+        
+        selection_frame.rowconfigure(0, weight=1)
+        selection_frame.columnconfigure(0, weight=1)
+        
+        button_row = 0
+        button_col = 0
+        max_cols = 3
+
+        classrooms = self.controller.data_store.get_all_classrooms()
+        self.class_buttons = {}
+        for classroom in classrooms:
+            button = ttk.Button(
+                selection_frame,
+                text=f"{classroom.name}\n({len(classroom.students)}名学生)",
+                command=lambda class_id=classroom.class_id: self.on_class_selected(
+                    class_id
+                ),
+                width=20,
+            )
+            button.grid(row=button_row, column=button_col, padx=5, pady=5, sticky="nsew")
+            self.class_buttons[classroom.class_id] = button
+
+            button_col += 1
+            if button_col >= max_cols:
+                button_col = 0
+                button_row += 1
+
+        for i in range(button_row + 1):
+            selection_frame.rowconfigure(i, weight=1)
+        for j in range(max_cols):
+            selection_frame.columnconfigure(j, weight=1)
+
+    def add_classroom(self) -> None:
+        """
+        添加新班级 / Add a new classroom
+        """
+        dialog = tk.Toplevel(self)
+        dialog.title("添加班级")
+        dialog.geometry("300x150")
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+
+        ttk.Label(dialog, text="班级名字：").pack(pady=(10, 0), padx=10)
+        name_entry = ttk.Entry(dialog, width=30)
+        name_entry.pack(pady=5, padx=10, fill=tk.X)
+        name_entry.focus()
+
+        def confirm():
+            name = name_entry.get().strip()
+            if not name:
+                messagebox.showwarning("输入错误", "班级名字不能为空。")
+                return
+            
+            self.controller.data_store.add_classroom(name)
+            dialog.destroy()
+            self.refresh_classrooms()
+            messagebox.showinfo("成功", f"班级 {name} 已添加。")
+
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+
+        ttk.Button(button_frame, text="确定", command=confirm).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="取消", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def edit_classroom(self) -> None:
+        """
+        修改班级名字 / Edit classroom name
+        """
+        class_id = self.selected_class_var.get()
+        if not class_id:
+            messagebox.showwarning("未选择班级", "请先选择一个班级。")
+            return
+
+        classroom = self.controller.data_store.get_classroom(class_id)
+        
+        dialog = tk.Toplevel(self)
+        dialog.title("修改班级")
+        dialog.geometry("300x150")
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+
+        ttk.Label(dialog, text="班级名字：").pack(pady=(10, 0), padx=10)
+        name_entry = ttk.Entry(dialog, width=30)
+        name_entry.insert(0, classroom.name)
+        name_entry.pack(pady=5, padx=10, fill=tk.X)
+        name_entry.focus()
+
+        def confirm():
+            new_name = name_entry.get().strip()
+            if not new_name:
+                messagebox.showwarning("输入错误", "班级名字不能为空。")
+                return
+            
+            self.controller.data_store.update_classroom_name(class_id, new_name)
+            dialog.destroy()
+            self.refresh_classrooms()
+            messagebox.showinfo("成功", f"班级已改名为 {new_name}。")
+
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+
+        ttk.Button(button_frame, text="确定", command=confirm).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="取消", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def delete_classroom(self) -> None:
+        """
+        删除班级 / Delete a classroom
+        """
+        class_id = self.selected_class_var.get()
+        if not class_id:
+            messagebox.showwarning("未选择班级", "请先选择一个班级。")
+            return
+
+        classroom = self.controller.data_store.get_classroom(class_id)
+        
+        if messagebox.askyesno(
+            "确认删除",
+            f"确定要删除班级 {classroom.name} 吗？\n此操作不可撤销。",
+        ):
+            self.controller.data_store.remove_classroom(class_id)
+            self.selected_class_var.set("")
+            self.selection_display.config(text="未选择班级")
+            self.refresh_classrooms()
+            messagebox.showinfo("成功", f"班级 {classroom.name} 已删除。")

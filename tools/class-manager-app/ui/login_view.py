@@ -24,45 +24,45 @@ class LoginView(ttk.Frame):
         # 设置样式 / Set style
         self.configure(padding="20")
 
-        # 标题 / Title
+        # 标题 - 西瓜老师 / Title - XiguaTeacher
         title_label = ttk.Label(
-            self, text="课堂管理系统 - 登录", font=("Arial", 18, "bold")
+            self, text="西瓜老师", font=("Arial", 32, "bold"), foreground="#4CAF50"
         )
-        title_label.pack(pady=(0, 30))
+        title_label.pack(pady=(20, 40))
 
-        # 用户名输入框 / Username input
+        # 账号输入框 / Username input
         username_frame = ttk.Frame(self)
-        username_frame.pack(fill=tk.X, pady=10)
+        username_frame.pack(fill=tk.X, pady=15)
 
-        username_label = ttk.Label(username_frame, text="用户名：", width=10)
-        username_label.pack(side=tk.LEFT, padx=(0, 10))
+        username_label = ttk.Label(username_frame, text="账号", font=("Arial", 11))
+        username_label.pack(side=tk.LEFT, padx=(0, 15))
 
         self.username_var = tk.StringVar()
-        self.username_entry = ttk.Entry(username_frame, textvariable=self.username_var)
+        self.username_entry = ttk.Entry(username_frame, textvariable=self.username_var, width=30)
         self.username_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.username_entry.focus()
 
         # 密码输入框 / Password input
         password_frame = ttk.Frame(self)
-        password_frame.pack(fill=tk.X, pady=10)
+        password_frame.pack(fill=tk.X, pady=15)
 
-        password_label = ttk.Label(password_frame, text="密码：", width=10)
-        password_label.pack(side=tk.LEFT, padx=(0, 10))
+        password_label = ttk.Label(password_frame, text="密码", font=("Arial", 11))
+        password_label.pack(side=tk.LEFT, padx=(0, 15))
 
         self.password_var = tk.StringVar()
         self.password_entry = ttk.Entry(
-            password_frame, textvariable=self.password_var, show="*"
+            password_frame, textvariable=self.password_var, show="*", width=30
         )
         self.password_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # 绑定回车键 / Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self.login())
 
-        # 登录按钮 / Login button
+        # 登录按钮 / Login button - 居中显示
         button_frame = ttk.Frame(self)
-        button_frame.pack(pady=20)
+        button_frame.pack(pady=30)
 
-        login_button = ttk.Button(button_frame, text="登录", command=self.login)
+        login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
         login_button.pack(side=tk.LEFT, padx=5)
 
         # 底部说明 / Footer text

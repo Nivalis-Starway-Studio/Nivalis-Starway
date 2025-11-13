@@ -1,9 +1,10 @@
 """
-班级详情视图 / Class detail view for managing student coins
+班级详情视图 / Class detail view for managing student coins and 4-week display
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from datetime import datetime, timedelta
 
 
 class ClassDetailView(ttk.Frame):
@@ -42,12 +43,31 @@ class ClassDetailView(ttk.Frame):
         self.stats_label = ttk.Label(top_frame, text="", font=("Arial", 10))
         self.stats_label.pack(side=tk.LEFT, expand=True, padx=(20, 0))
 
-        # 学生列表表格 / Student roster treeview
+        # 学生管理按钮 / Student management buttons
+        management_frame = ttk.Frame(top_frame)
+        management_frame.pack(side=tk.RIGHT)
+
+        add_student_button = ttk.Button(
+            management_frame, text="添加学生", command=self.add_student
+        )
+        add_student_button.pack(side=tk.LEFT, padx=5)
+
+        edit_student_button = ttk.Button(
+            management_frame, text="修改名字", command=self.edit_student_name
+        )
+        edit_student_button.pack(side=tk.LEFT, padx=5)
+
+        delete_student_button = ttk.Button(
+            management_frame, text="删除学生", command=self.delete_student
+        )
+        delete_student_button.pack(side=tk.LEFT, padx=5)
+
+        # 学生列表表格 - 4周显示 / Student roster treeview - 4 weeks display
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # 创建Treeview / Create Treeview
-        columns = ("name", "weekly", "cumulative")
+        # 创建Treeview / Create Treeview with 4 weeks
+        columns = ("name", "week_minus1", "week_0", "week_1", "week_2")
         self.tree = ttk.Treeview(
             tree_frame,
             columns=columns,
@@ -57,12 +77,19 @@ class ClassDetailView(ttk.Frame):
 
         # 定义列 / Define columns
         self.tree.heading("name", text="学生名字")
-        self.tree.heading("weekly", text="周币")
-        self.tree.heading("cumulative", text="累计币")
+        
+        # 获取周的日期范围 / Get week date ranges
+        week_labels = self._get_week_labels()
+        self.tree.heading("week_minus1", text=f"上一周\n{week_labels[-1]}")
+        self.tree.heading("week_0", text=f"本周\n{week_labels[0]}")
+        self.tree.heading("week_1", text=f"下一周\n{week_labels[1]}")
+        self.tree.heading("week_2", text=f"下下周\n{week_labels[2]}")
 
-        self.tree.column("name", width=200, anchor="w")
-        self.tree.column("weekly", width=100, anchor="center")
-        self.tree.column("cumulative", width=100, anchor="center")
+        self.tree.column("name", width=150, anchor="w")
+        self.tree.column("week_minus1", width=100, anchor="center")
+        self.tree.column("week_0", width=100, anchor="center")
+        self.tree.column("week_1", width=100, anchor="center")
+        self.tree.column("week_2", width=100, anchor="center")
 
         # 绑定行选择事件 / Bind row selection
         self.tree.bind("<ButtonRelease-1>", self.on_row_selected)
@@ -74,7 +101,7 @@ class ClassDetailView(ttk.Frame):
         self.tree.configure(yscroll=scrollbar.set)
 
         # 中部控制区域 - 币数调整 / Middle control area - Coin adjustment
-        control_frame = ttk.LabelFrame(self, text="币数管理", padding="10")
+        control_frame = ttk.LabelFrame(self, text="币数管理（本周）", padding="10")
         control_frame.pack(fill=tk.X, pady=10)
 
         # 学生选择显示 / Student selection display
@@ -114,6 +141,36 @@ class ClassDetailView(ttk.Frame):
         )
         reset_button.pack(side=tk.LEFT, padx=5)
 
+    def _get_week_labels(self) -> list:
+        """
+        获取4周的标签 / Get labels for 4 weeks
+        返回: [本周, 下周, 下下周, 上一周]的日期范围
+        """
+        labels = []
+        current_date = datetime.now()
+        start_of_week = current_date - timedelta(days=current_date.weekday())
+        
+        # 获取上一周
+        prev_week_start = start_of_week - timedelta(weeks=1)
+        prev_week_end = prev_week_start + timedelta(days=6)
+        labels.append(f"{prev_week_start.strftime('%m/%d')}-{prev_week_end.strftime('%m/%d')}")
+        
+        # 获取本周
+        this_week_end = start_of_week + timedelta(days=6)
+        labels.append(f"{start_of_week.strftime('%m/%d')}-{this_week_end.strftime('%m/%d')}")
+        
+        # 获取下一周
+        next_week_start = start_of_week + timedelta(weeks=1)
+        next_week_end = next_week_start + timedelta(days=6)
+        labels.append(f"{next_week_start.strftime('%m/%d')}-{next_week_end.strftime('%m/%d')}")
+        
+        # 获取下下周
+        next_next_week_start = start_of_week + timedelta(weeks=2)
+        next_next_week_end = next_next_week_start + timedelta(days=6)
+        labels.append(f"{next_next_week_start.strftime('%m/%d')}-{next_next_week_end.strftime('%m/%d')}")
+        
+        return labels
+
     def load_classroom_data(self, class_id: str) -> None:
         """
         加载班级数据并刷新表格
@@ -140,8 +197,8 @@ class ClassDetailView(ttk.Frame):
 
     def refresh_student_table(self) -> None:
         """
-        刷新学生表格数据
-        / Refresh the student table with current data
+        刷新学生表格数据（显示4周）
+        / Refresh the student table with 4 weeks data
         """
         if not self.current_class_id:
             return
@@ -153,13 +210,27 @@ class ClassDetailView(ttk.Frame):
         # 加载学生数据 / Load student data
         classroom = self.controller.data_store.get_classroom(self.current_class_id)
         for student in classroom.get_all_students():
+            # 获取4周的币数 / Get coins for 4 weeks
+            week_minus1 = student.weekly_history.get(
+                self.controller.data_store.current_week - 1, 0
+            )
+            week_0 = student.weekly_coins  # 本周使用当前的weekly_coins
+            week_1 = student.weekly_history.get(
+                self.controller.data_store.current_week + 1, 0
+            )
+            week_2 = student.weekly_history.get(
+                self.controller.data_store.current_week + 2, 0
+            )
+            
             self.tree.insert(
                 "",
                 "end",
                 values=(
                     student.name,
-                    student.weekly_coins,
-                    student.cumulative_coins,
+                    week_minus1,
+                    week_0,
+                    week_1,
+                    week_2,
                 ),
             )
 
@@ -178,7 +249,7 @@ class ClassDetailView(ttk.Frame):
         item = selection[0]
         values = self.tree.item(item, "values")
         self.selected_student = values[0]  # 学生名字 / Student name
-        weekly_coins = int(values[1])
+        weekly_coins = int(values[2])  # 本周币数 / This week coins (index 2)
 
         self.student_display.config(text=self.selected_student)
         self.coins_var.set(str(weekly_coins))
@@ -242,6 +313,125 @@ class ClassDetailView(ttk.Frame):
                 f"累计总币: {stats['total_cumulative']}"
             )
             self.stats_label.config(text=stats_text)
+
+    def add_student(self) -> None:
+        """
+        添加新学生到班级 / Add a new student to classroom
+        """
+        dialog = tk.Toplevel(self)
+        dialog.title("添加学生")
+        dialog.geometry("300x150")
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+
+        ttk.Label(dialog, text="学生名字：").pack(pady=(10, 0), padx=10)
+        name_entry = ttk.Entry(dialog, width=30)
+        name_entry.pack(pady=5, padx=10, fill=tk.X)
+        name_entry.focus()
+
+        def confirm():
+            name = name_entry.get().strip()
+            if not name:
+                messagebox.showwarning("输入错误", "学生名字不能为空。")
+                return
+            
+            # 检查学生是否已存在 / Check if student already exists
+            classroom = self.controller.data_store.get_classroom(self.current_class_id)
+            if classroom.get_student_by_name(name):
+                messagebox.showwarning("输入错误", f"学生 {name} 已存在于班级中。")
+                return
+            
+            self.controller.data_store.add_student_to_classroom(
+                self.current_class_id, name
+            )
+            dialog.destroy()
+            self.refresh_student_table()
+            self.update_statistics()
+            messagebox.showinfo("成功", f"学生 {name} 已添加到班级。")
+
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+
+        ttk.Button(button_frame, text="确定", command=confirm).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="取消", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def edit_student_name(self) -> None:
+        """
+        修改学生名字 / Edit student name
+        """
+        if not self.selected_student:
+            messagebox.showwarning("未选择学生", "请先在表格中选择一个学生。")
+            return
+
+        dialog = tk.Toplevel(self)
+        dialog.title("修改学生名字")
+        dialog.geometry("300x150")
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+
+        ttk.Label(dialog, text="新名字：").pack(pady=(10, 0), padx=10)
+        name_entry = ttk.Entry(dialog, width=30)
+        name_entry.insert(0, self.selected_student)
+        name_entry.pack(pady=5, padx=10, fill=tk.X)
+        name_entry.focus()
+
+        def confirm():
+            new_name = name_entry.get().strip()
+            if not new_name:
+                messagebox.showwarning("输入错误", "学生名字不能为空。")
+                return
+            
+            if new_name == self.selected_student:
+                dialog.destroy()
+                return
+            
+            # 检查新名字是否已存在 / Check if new name already exists
+            classroom = self.controller.data_store.get_classroom(self.current_class_id)
+            if classroom.get_student_by_name(new_name):
+                messagebox.showwarning("输入错误", f"学生 {new_name} 已存在于班级中。")
+                return
+            
+            if self.controller.data_store.update_student_name(
+                self.current_class_id, self.selected_student, new_name
+            ):
+                dialog.destroy()
+                self.selected_student = None
+                self.student_display.config(text="无")
+                self.coins_var.set("0")
+                self.refresh_student_table()
+                messagebox.showinfo("成功", f"学生名字已修改为 {new_name}。")
+            else:
+                messagebox.showerror("失败", "修改学生名字失败。")
+
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+
+        ttk.Button(button_frame, text="确定", command=confirm).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="取消", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def delete_student(self) -> None:
+        """
+        删除学生 / Delete a student
+        """
+        if not self.selected_student:
+            messagebox.showwarning("未选择学生", "请先在表格中选择一个学生。")
+            return
+
+        if messagebox.askyesno(
+            "确认删除",
+            f"确定要删除学生 {self.selected_student} 吗？\n此操作不可撤销。",
+        ):
+            if self.controller.data_store.remove_student_from_classroom(
+                self.current_class_id, self.selected_student
+            ):
+                self.selected_student = None
+                self.student_display.config(text="无")
+                self.coins_var.set("0")
+                self.refresh_student_table()
+                self.update_statistics()
+                messagebox.showinfo("成功", "学生已删除。")
+            else:
+                messagebox.showerror("失败", "删除学生失败。")
 
     def back_to_main(self) -> None:
         """
