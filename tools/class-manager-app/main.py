@@ -23,8 +23,15 @@ class ClassManagerApp(tk.Tk):
 
         # 设置窗口属性 / Set window properties
         self.title("课堂管理系统")
-        self.geometry("900x700")
-        self.minsize(800, 600)
+        
+        # 设置全屏显示 / Set fullscreen display
+        self.state('zoomed')  # Windows全屏
+        # 对于Linux/Mac，可以使用：
+        # self.attributes('-zoomed', True)
+        
+        # 备用尺寸设置 / Backup size settings
+        self.geometry("1200x800")
+        self.minsize(1000, 700)
 
         # 初始化数据存储 / Initialize data store
         self.data_store = ClassDataStore()
@@ -60,16 +67,19 @@ class ClassManagerApp(tk.Tk):
         style = ttk.Style()
         style.theme_use("clam")
 
-        # 配置颜色 / Configure colors
-        style.configure("TLabel", background="", foreground="black")
+        # 配置颜色 - 修复黑色背景问题 / Configure colors - fix black background issue
+        style.configure("TLabel", background="white", foreground="black")
         style.configure("TButton", padding=5)
-        style.configure("TFrame", background="")
+        style.configure("TFrame", background="white")
         style.configure(
             "TLabelFrame",
-            background="",
+            background="white",
             foreground="black",
             padding=10,
         )
+        
+        # 设置主窗口背景色 / Set main window background
+        self.configure(bg="white")
 
     def show_frame(self, name: str) -> None:
         """

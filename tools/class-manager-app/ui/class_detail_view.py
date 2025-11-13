@@ -21,7 +21,7 @@ class ClassDetailView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.configure(padding="20")
+        self.configure(padding="20", background="white")
 
         self.current_class_id = None
         self.selected_student = None
@@ -38,6 +38,10 @@ class ClassDetailView(ttk.Frame):
 
         back_button = ttk.Button(top_frame, text="返回主菜单", command=self.back_to_main)
         back_button.pack(side=tk.LEFT)
+
+        # 全屏切换 / Toggle fullscreen
+        fullscreen_button = ttk.Button(top_frame, text="切换全屏", command=self.toggle_fullscreen)
+        fullscreen_button.pack(side=tk.LEFT, padx=(10, 0))
 
         # 统计信息 / Statistics
         self.stats_label = ttk.Label(top_frame, text="", font=("Arial", 10))
@@ -66,8 +70,8 @@ class ClassDetailView(ttk.Frame):
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
-        # 创建Treeview / Create Treeview with 4 weeks
-        columns = ("name", "week_minus1", "week_0", "week_1", "week_2")
+        # 创建Treeview / Create Treeview with 5 columns (4 weeks + total)
+        columns = ("name", "week_minus1", "week_0", "week_1", "week_2", "total")
         self.tree = ttk.Treeview(
             tree_frame,
             columns=columns,
@@ -84,15 +88,18 @@ class ClassDetailView(ttk.Frame):
         self.tree.heading("week_0", text=f"本周\n{week_labels[0]}")
         self.tree.heading("week_1", text=f"下一周\n{week_labels[1]}")
         self.tree.heading("week_2", text=f"下下周\n{week_labels[2]}")
+        self.tree.heading("total", text="总小码币\n累计")
 
         self.tree.column("name", width=150, anchor="w")
         self.tree.column("week_minus1", width=100, anchor="center")
         self.tree.column("week_0", width=100, anchor="center")
         self.tree.column("week_1", width=100, anchor="center")
         self.tree.column("week_2", width=100, anchor="center")
+        self.tree.column("total", width=100, anchor="center")
 
-        # 绑定行选择事件 / Bind row selection
+        # 绑定行选择事件和右键菜单 / Bind row selection and right-click menu
         self.tree.bind("<ButtonRelease-1>", self.on_row_selected)
+        self.tree.bind("<Button-3>", self.show_student_context_menu)
         self.tree.pack(fill=tk.BOTH, expand=True)
 
         # 滚动条 / Scrollbar
@@ -140,6 +147,26 @@ class ClassDetailView(ttk.Frame):
             input_frame, text="重置全班周币", command=self.reset_weekly_coins
         )
         reset_button.pack(side=tk.LEFT, padx=5)
+
+    def show_student_context_menu(self, event) -> None:
+        """
+        显示学生右键菜单 / Show student context menu
+        """
+        # 获取点击位置的学生 / Get student at click position
+        item = self.tree.identify_row(event.y)
+        if item:
+            self.tree.selection_set(item)
+            values = self.tree.item(item, "values")
+            student_name = values[0]
+            
+            context_menu = tk.Menu(self, tearoff=0)
+            context_menu.add_command(label="修改学生姓名", command=lambda: self.edit_student_name())
+            context_menu.add_command(label="删除学生", command=lambda: self.delete_student())
+            
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                context_menu.grab_release()
 
     def _get_week_labels(self) -> list:
         """
@@ -222,6 +249,9 @@ class ClassDetailView(ttk.Frame):
                 self.controller.data_store.current_week + 2, 0
             )
             
+            # 计算总小码币数量 / Calculate total coins
+            total = student.cumulative_coins + week_0
+            
             self.tree.insert(
                 "",
                 "end",
@@ -231,6 +261,7 @@ class ClassDetailView(ttk.Frame):
                     week_0,
                     week_1,
                     week_2,
+                    total,
                 ),
             )
 
@@ -249,7 +280,7 @@ class ClassDetailView(ttk.Frame):
         item = selection[0]
         values = self.tree.item(item, "values")
         self.selected_student = values[0]  # 学生名字 / Student name
-        weekly_coins = int(values[2])  # 本周币数 / This week coins (index 2)
+        weekly_coins = int(values[2])  # 本周币数 / This week coins (index 2，因为新增了total列)
 
         self.student_display.config(text=self.selected_student)
         self.coins_var.set(str(weekly_coins))
@@ -432,6 +463,16 @@ class ClassDetailView(ttk.Frame):
                 messagebox.showinfo("成功", "学生已删除。")
             else:
                 messagebox.showerror("失败", "删除学生失败。")
+
+    def toggle_fullscreen(self) -> None:
+        """
+        切换全屏模式 / Toggle fullscreen mode
+        """
+        current_state = self.controller.state()
+        if current_state == 'zoomed':
+            self.controller.state('normal')
+        else:
+            self.controller.state('zoomed')
 
     def back_to_main(self) -> None:
         """
