@@ -1,4 +1,4 @@
-"""数据模块 / Data module for classroom manager"""
+"""数据模块"""
 
 from .models import Classroom, Student
 from .store import ClassDataStore
