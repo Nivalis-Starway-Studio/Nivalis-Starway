@@ -60,8 +60,8 @@ class LoginView(ttk.Frame):
         username_label.pack(side=tk.LEFT, padx=(0, 15))
 
         self.username_var = tk.StringVar()
-        self.username_entry = ttk.Entry(username_frame, textvariable=self.username_var, width=30)
-        self.username_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.username_entry = ttk.Entry(username_frame, textvariable=self.username_var, width=20)
+        self.username_entry.pack(side=tk.LEFT)
         self.username_entry.focus()
 
         # 密码输入框 / Password input
@@ -73,9 +73,9 @@ class LoginView(ttk.Frame):
 
         self.password_var = tk.StringVar()
         self.password_entry = ttk.Entry(
-            password_frame, textvariable=self.password_var, show="*", width=30
+            password_frame, textvariable=self.password_var, show="*", width=20
         )
-        self.password_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.password_entry.pack(side=tk.LEFT)
 
         # 输入内容仅允许英文字符 / Restrict input to ASCII characters
         vcmd = (self.register(self._validate_ascii), "%P")

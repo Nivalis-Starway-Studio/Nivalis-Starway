@@ -5,6 +5,14 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime, timedelta
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    import matplotlib
+    matplotlib.use('TkAgg')  # 设置matplotlib后端
+    CHART_AVAILABLE = True
+except ImportError:
+    CHART_AVAILABLE = False
 
 
 class ClassDetailView(ttk.Frame):
@@ -46,6 +54,10 @@ class ClassDetailView(ttk.Frame):
         # 统计信息 / Statistics
         self.stats_label = ttk.Label(top_frame, text="", font=("Arial", 10))
         self.stats_label.pack(side=tk.LEFT, expand=True, padx=(20, 0))
+
+        # 图表统计按钮 / Chart statistics button
+        chart_button = ttk.Button(top_frame, text="图表统计", command=self.show_chart_statistics)
+        chart_button.pack(side=tk.RIGHT, padx=(0, 10))
 
         # 学生管理按钮 / Student management buttons
         management_frame = ttk.Frame(top_frame)
@@ -90,10 +102,10 @@ class ClassDetailView(ttk.Frame):
         self.tree.heading("total", text="总小码币\n累计")
 
         self.tree.column("name", width=150, anchor="w")
-        self.tree.column("week_minus2", width=120, anchor="center")
-        self.tree.column("week_minus1", width=120, anchor="center")
-        self.tree.column("week_0", width=120, anchor="center")
-        self.tree.column("total", width=120, anchor="center")
+        self.tree.column("week_minus2", width=150, anchor="center")
+        self.tree.column("week_minus1", width=150, anchor="center")
+        self.tree.column("week_0", width=150, anchor="center")
+        self.tree.column("total", width=150, anchor="center")
 
         # 绑定行选择事件和右键菜单 / Bind row selection and right-click menu
         self.tree.bind("<ButtonRelease-1>", self.on_row_selected)
@@ -141,11 +153,10 @@ class ClassDetailView(ttk.Frame):
         )
         update_button.pack(side=tk.LEFT, padx=5)
 
-        # 重置周币按钮 / Reset weekly coins button
-        reset_button = ttk.Button(
-            input_frame, text="重置全班周币", command=self.reset_weekly_coins
-        )
-        reset_button.pack(side=tk.LEFT, padx=5)
+        # 说明文字 / Description
+        desc_label = ttk.Label(control_frame, text="提示：未选中学生时，将更新全班学生；选中学生时，仅更新该学生。", 
+                              font=("Arial", 9), foreground="gray")
+        desc_label.pack(pady=(10, 0))
 
     def show_student_context_menu(self, event) -> None:
         """
@@ -352,13 +363,9 @@ class ClassDetailView(ttk.Frame):
 
     def update_student_coins(self) -> None:
         """
-        更新选中学生的周币
-        / Update the selected student's weekly coins
+        更新学生周币 - 支持全班更新和单个学生更新
+        / Update student weekly coins - supports both class-wide and individual updates
         """
-        if not self.selected_student:
-            messagebox.showwarning("未选择学生", "请先在表格中选择一个学生。")
-            return
-
         try:
             new_coins = int(self.coins_var.get())
             if new_coins < 0:
@@ -368,33 +375,36 @@ class ClassDetailView(ttk.Frame):
             messagebox.showerror("输入错误", "请输入有效的数字。")
             return
 
-        # 确认更新 / Confirm update
-        if messagebox.askyesno(
-            "确认更新",
-            f"确认将 {self.selected_student} 的周币更新为 {new_coins}?",
-        ):
-            self.controller.data_store.update_student_weekly_coins(
-                self.current_class_id, self.selected_student, new_coins
-            )
-            self.refresh_student_table()
-            self.update_statistics()
-            messagebox.showinfo("更新成功", "学生币数已成功更新。")
-
-    def reset_weekly_coins(self) -> None:
-        """
-        重置全班周币，并累加到累计币
-        / Reset all students' weekly coins and add to cumulative
-        """
-        classroom = self.controller.data_store.get_classroom(self.current_class_id)
-
-        if messagebox.askyesno(
-            "确认重置",
-            f"确认重置班级 {classroom.name} 的所有周币?\n\n周币将被加入累计币中。",
-        ):
-            self.controller.data_store.reset_weekly_coins(self.current_class_id)
-            self.refresh_student_table()
-            self.update_statistics()
-            messagebox.showinfo("重置成功", "周币已重置，并已累加到累计币中。")
+        if not self.selected_student:
+            # 更新全班学生 / Update all students in class
+            classroom = self.controller.data_store.get_classroom(self.current_class_id)
+            if messagebox.askyesno(
+                "确认全班更新",
+                f"确认为班级 {classroom.name} 的所有学生添加 {new_coins} 小码币到本周列?\n"
+                f"每个学生的总小码币也将相应增加。",
+            ):
+                data_store = self.controller.data_store
+                for student in classroom.get_all_students():
+                    # 获取当前本周币数
+                    current_weekly = data_store.get_student_week_value(student, 0)
+                    # 更新本周币数
+                    data_store.update_student_week_coins(self.current_class_id, student.name, 0, current_weekly + new_coins)
+                
+                self.refresh_student_table()
+                self.update_statistics()
+                messagebox.showinfo("更新成功", f"已为全班所有学生添加 {new_coins} 小码币。")
+        else:
+            # 更新单个学生 / Update individual student
+            if messagebox.askyesno(
+                "确认更新",
+                f"确认将 {self.selected_student} 的周币更新为 {new_coins}?",
+            ):
+                self.controller.data_store.update_student_weekly_coins(
+                    self.current_class_id, self.selected_student, new_coins
+                )
+                self.refresh_student_table()
+                self.update_statistics()
+                messagebox.showinfo("更新成功", f"学生 {self.selected_student} 的币数已成功更新。")
 
     def update_statistics(self) -> None:
         """
@@ -548,6 +558,74 @@ class ClassDetailView(ttk.Frame):
         self.coins_var.set("0")
         self.student_display.config(text="无")
         self.controller.show_frame("MainView")
+
+    def show_chart_statistics(self) -> None:
+        """
+        显示图表统计窗口
+        / Show chart statistics window
+        """
+        if not CHART_AVAILABLE:
+            messagebox.showerror("功能不可用", "图表统计功能需要安装matplotlib库。")
+            return
+            
+        if not self.current_class_id:
+            messagebox.showerror("错误", "请先加载班级数据。")
+            return
+            
+        # 创建新窗口 / Create new window
+        chart_window = tk.Toplevel(self)
+        chart_window.title("班级小码币统计图表")
+        chart_window.geometry("1000x600")
+        chart_window.transient(self.winfo_toplevel())
+        chart_window.grab_set()
+        
+        # 获取班级数据 / Get classroom data
+        classroom = self.controller.data_store.get_classroom(self.current_class_id)
+        data_store = self.controller.data_store
+        
+        # 准备数据 / Prepare data
+        student_names = []
+        weekly_coins = []
+        total_coins = []
+        
+        for student in classroom.get_all_students():
+            student_names.append(student.name)
+            weekly_coins.append(data_store.get_student_week_value(student, 0))
+            total_coins.append(data_store.get_student_total(student))
+        
+        # 设置中文字体 / Set Chinese font
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
+        plt.rcParams['axes.unicode_minus'] = False
+        
+        # 创建图表 / Create charts
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # 本周小码币饼图 / Weekly coins pie chart
+        if weekly_coins and sum(weekly_coins) > 0:
+            wedges1, texts1, autotexts1 = ax1.pie(weekly_coins, labels=student_names, autopct='%1.1f%%', startangle=90)
+            ax1.set_title(f'{classroom.name} - 本周小码币分布', fontsize=14, fontweight='bold')
+        else:
+            ax1.text(0.5, 0.5, '本周暂无小码币数据', ha='center', va='center', fontsize=12)
+            ax1.set_title(f'{classroom.name} - 本周小码币分布', fontsize=14, fontweight='bold')
+        
+        # 总小码币饼图 / Total coins pie chart
+        if total_coins and sum(total_coins) > 0:
+            wedges2, texts2, autotexts2 = ax2.pie(total_coins, labels=student_names, autopct='%1.1f%%', startangle=90)
+            ax2.set_title(f'{classroom.name} - 总小码币分布', fontsize=14, fontweight='bold')
+        else:
+            ax2.text(0.5, 0.5, '暂无总小码币数据', ha='center', va='center', fontsize=12)
+            ax2.set_title(f'{classroom.name} - 总小码币分布', fontsize=14, fontweight='bold')
+        
+        plt.tight_layout()
+        
+        # 将图表嵌入到Tkinter窗口 / Embed chart in Tkinter window
+        canvas = FigureCanvasTkAgg(fig, chart_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 添加关闭按钮 / Add close button
+        close_button = ttk.Button(chart_window, text="关闭", command=chart_window.destroy)
+        close_button.pack(pady=10)
 
     def reset(self) -> None:
         """重置班级详情视图 / Reset class detail view"""
