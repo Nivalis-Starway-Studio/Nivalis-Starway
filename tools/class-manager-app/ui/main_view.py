@@ -3,7 +3,16 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
+import os
+from datetime import datetime
+try:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    import openpyxl.styles
+    EXCEL_AVAILABLE = True
+except ImportError:
+    EXCEL_AVAILABLE = False
 
 
 class MainView(ttk.Frame):
@@ -32,25 +41,6 @@ class MainView(ttk.Frame):
         description_label = ttk.Label(self, text="请选择要管理的班级：")
         description_label.pack(fill=tk.X, pady=(0, 15))
 
-        # 班级管理按钮 / Classroom management buttons
-        management_frame = ttk.Frame(self)
-        management_frame.pack(fill=tk.X, pady=(0, 10))
-
-        add_class_button = ttk.Button(
-            management_frame, text="添加班级", command=self.add_classroom
-        )
-        add_class_button.pack(side=tk.LEFT, padx=5)
-
-        edit_class_button = ttk.Button(
-            management_frame, text="修改班级", command=self.edit_classroom
-        )
-        edit_class_button.pack(side=tk.LEFT, padx=5)
-
-        delete_class_button = ttk.Button(
-            management_frame, text="删除班级", command=self.delete_classroom
-        )
-        delete_class_button.pack(side=tk.LEFT, padx=5)
-
         # 班级选择区域 / Classroom selection area
         self.selection_frame = ttk.Frame(self)
         self.selection_frame.pack(fill=tk.BOTH, expand=True, pady=10)
@@ -74,12 +64,6 @@ class MainView(ttk.Frame):
         # 按钮容器 / Button container
         button_frame = ttk.Frame(control_frame)
         button_frame.pack(side=tk.RIGHT)
-
-        # 进入班级详情 / Enter class detail
-        detail_button = ttk.Button(
-            button_frame, text="进入班级", command=self.enter_class_detail
-        )
-        detail_button.pack(side=tk.LEFT, padx=5)
 
         # 退出登录 / Logout
         logout_button = ttk.Button(
@@ -160,6 +144,8 @@ class MainView(ttk.Frame):
         context_menu = tk.Menu(self, tearoff=0)
         context_menu.add_command(label="修改班级名字", command=lambda: self.edit_classroom_by_id(class_id))
         context_menu.add_command(label="删除班级", command=lambda: self.delete_classroom_by_id(class_id))
+        context_menu.add_separator()
+        context_menu.add_command(label="导出Excel", command=lambda: self.export_class_excel(class_id))
         
         try:
             context_menu.tk_popup(event.x_root, event.y_root)
@@ -341,3 +327,89 @@ class MainView(ttk.Frame):
             self.selection_display.config(text="未选择班级")
             self.refresh_classrooms()
             messagebox.showinfo("成功", f"班级 {classroom.name} 已删除。")
+
+    def export_class_excel(self, class_id: str) -> None:
+        """
+        导出班级小码币数据到Excel文件
+        / Export class coin data to Excel file
+        """
+        if not EXCEL_AVAILABLE:
+            messagebox.showerror("功能不可用", "Excel导出功能需要安装openpyxl库。")
+            return
+            
+        classroom = self.controller.data_store.get_classroom(class_id)
+        if not classroom:
+            messagebox.showerror("错误", "班级数据获取失败。")
+            return
+            
+        # 选择保存位置 / Choose save location
+        filename = f"{classroom.name}_小码币数据_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        file_path = filedialog.asksaveasfilename(
+            title="保存Excel文件",
+            initialfile=filename,
+            defaultextension=".xlsx",
+            filetypes=[("Excel文件", "*.xlsx"), ("所有文件", "*.*")]
+        )
+        
+        if not file_path:
+            return  # 用户取消了保存
+            
+        try:
+            # 创建工作簿 / Create workbook
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "小码币统计"
+            
+            # 设置标题样式 / Set title style
+            title_font = Font(name='微软雅黑', size=14, bold=True)
+            header_font = Font(name='微软雅黑', size=12, bold=True)
+            header_fill = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
+            header_alignment = Alignment(horizontal='center', vertical='center')
+            
+            # 合并标题单元格 / Merge title cells
+            ws.merge_cells('A1:B1')
+            ws['A1'] = f"{classroom.name} - 小码币数据统计"
+            ws['A1'].font = title_font
+            ws['A1'].alignment = header_alignment
+            
+            # 设置表头 / Set headers
+            ws['A2'] = "学生名字"
+            ws['B2'] = "总小码币数量"
+            
+            # 应用表头样式 / Apply header styles
+            for cell in ['A2', 'B2']:
+                ws[cell].font = header_font
+                ws[cell].fill = header_fill
+                ws[cell].alignment = header_alignment
+            
+            # 填充数据 / Fill data
+            row = 3
+            data_store = self.controller.data_store
+            for student in classroom.get_all_students():
+                total_coins = data_store.get_student_total(student)
+                ws[f'A{row}'] = student.name
+                ws[f'B{row}'] = total_coins
+                row += 1
+            
+            # 设置列宽 / Set column widths
+            ws.column_dimensions['A'].width = 20
+            ws.column_dimensions['B'].width = 15
+            
+            # 添加边框 / Add borders
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
+            for row in range(1, row):
+                for col in ['A', 'B']:
+                    ws[f'{col}{row}'].border = thin_border
+            
+            # 保存文件 / Save file
+            wb.save(file_path)
+            messagebox.showinfo("导出成功", f"Excel文件已保存到：\n{file_path}")
+            
+        except Exception as e:
+            messagebox.showerror("导出失败", f"导出Excel文件时发生错误：\n{str(e)}")
