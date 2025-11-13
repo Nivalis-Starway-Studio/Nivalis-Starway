@@ -20,7 +20,6 @@ class MainView(ttk.Frame):
         """
         super().__init__(parent, **kwargs)
         self.controller = controller
-        self.pack(fill=tk.BOTH, expand=True)
         self.configure(padding="20")
 
         # 标题 / Title
