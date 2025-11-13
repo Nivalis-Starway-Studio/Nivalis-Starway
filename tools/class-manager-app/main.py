@@ -43,7 +43,7 @@ class ClassManagerApp(tk.Tk):
         self.setup_style()
 
         # 创建容器 / Create container
-        container = ttk.Frame(self)
+        container = tk.Frame(self, bg="white")
         container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
