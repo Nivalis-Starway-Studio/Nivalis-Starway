@@ -82,20 +82,32 @@ class ClassDetailView(ttk.Frame):
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
 
+        # 动态计算Treeview高度，适应不同屏幕尺寸（特别是高DPI缩放场景）
+        # / Dynamically calculate Treeview height for different screen sizes (especially high DPI scaling)
+        screen_height = self.winfo_screenheight()
+        # 根据屏幕高度计算合适的行数：小屏幕（如720p有效高度）显示8行，大屏幕显示更多
+        # / Calculate appropriate row count: 8 rows for small screens (like 720p effective height), more for larger screens
+        if screen_height <= 800:
+            tree_height = 8  # 小屏幕或高DPI缩放场景 / Small screen or high DPI scaling
+        elif screen_height <= 1080:
+            tree_height = 12  # 标准1080p显示 / Standard 1080p display
+        else:
+            tree_height = 15  # 大屏幕 / Large screen
+
         # 创建Treeview / Create Treeview with 5 columns (name + 3 weeks + total)
         columns = ("name", "week_minus2", "week_minus1", "week_0", "total")
         self.tree = ttk.Treeview(
             tree_frame,
             columns=columns,
             show="headings",
-            height=15,
+            height=tree_height,
         )
 
         # 通过样式配置增加行高和标题行高 / Increase row height and heading height through style configuration
         style = ttk.Style()
-        style.configure("Treeview", rowheight=40)  # 设置数据行高为40像素
+        style.configure("Treeview", rowheight=35)  # 减小行高到35px，让更多内容可见 / Reduce row height to 35px for more visibility
         style.configure("Treeview.Heading", font=("Arial", 10, "bold"), 
-                       padding=(10, 8))  # 设置标题字体和内边距，增加标题行高度
+                       padding=(8, 6))  # 略微减小标题内边距 / Slightly reduce heading padding
 
         # 定义列 / Define columns
         self.tree.heading("name", text="学生名字")
@@ -647,16 +659,18 @@ class ClassDetailView(ttk.Frame):
         screen_width = chart_window.winfo_screenwidth()
         screen_height = chart_window.winfo_screenheight()
         
-        # 窗口占屏幕的90%（留出边距）/ Window takes 90% of screen (leave margins)
-        window_width = int(screen_width * 0.9)
-        window_height = int(screen_height * 0.9)
+        # 窗口占屏幕的85%（留出更多边距，确保内容不被截断）
+        # / Window takes 85% of screen (leave more margins to ensure content is not cut off)
+        window_width = int(screen_width * 0.85)
+        window_height = int(screen_height * 0.85)
         
         # 计算窗口居中位置 / Calculate centered position
         x_offset = (screen_width - window_width) // 2
         y_offset = (screen_height - window_height) // 2
         
         chart_window.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
-        chart_window.state('zoomed')  # 最大化窗口 / Maximize window
+        # 不自动最大化，使用设定的尺寸确保布局可控 / Don't auto-maximize, use set size for controlled layout
+        # chart_window.state('zoomed')  
         
         chart_window.transient(self.winfo_toplevel())
         chart_window.grab_set()
@@ -683,44 +697,84 @@ class ClassDetailView(ttk.Frame):
         num_students = len(student_names)
         line_chart_rows = max(1, (num_students + 1) // 2)  # 每行2个学生 / 2 students per row
         
-        # ============ 创建主框架，划分两个区域 / Create main frame with two regions ============
-        main_frame = ttk.Frame(chart_window)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # ============ 创建顶部固定按钮区域 / Create top fixed button area ============
+        top_button_frame = ttk.Frame(chart_window)
+        top_button_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(10, 5))
         
-        # ============ 上方区域：折线图（可滚动）/ Top region: Line charts (scrollable) ============
+        # 关闭按钮放在右上角 / Close button in top-right corner
+        close_button_top = ttk.Button(
+            top_button_frame, 
+            text="关闭窗口", 
+            command=chart_window.destroy,
+            width=12
+        )
+        close_button_top.pack(side=tk.RIGHT)
+        
+        # 标题标签 / Title label
+        title_label = ttk.Label(
+            top_button_frame,
+            text=f"📊 {classroom.name} - 统计图表",
+            font=("Arial", 12, "bold")
+        )
+        title_label.pack(side=tk.LEFT)
+        
+        # ============ 创建可滚动的主内容区域 / Create scrollable main content area ============
+        # 创建Canvas和滚动条用于整个内容区域滚动
+        # / Create Canvas and Scrollbar for entire content area scrolling
+        main_canvas = tk.Canvas(chart_window, bg='white', highlightthickness=0)
+        main_scrollbar = ttk.Scrollbar(chart_window, orient="vertical", command=main_canvas.yview)
+        
+        # 可滚动的主框架 / Scrollable main frame
+        scrollable_main_frame = ttk.Frame(main_canvas)
+        
+        scrollable_main_frame.bind(
+            "<Configure>",
+            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+        )
+        
+        main_canvas.create_window((0, 0), window=scrollable_main_frame, anchor="nw")
+        main_canvas.configure(yscrollcommand=main_scrollbar.set)
+        
+        main_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(0, 10))
+        main_scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=(0, 10), padx=(0, 10))
+        
+        # 绑定鼠标滚轮到主Canvas / Bind mouse wheel to main Canvas
+        def _on_main_mousewheel(event):
+            main_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        main_canvas.bind_all("<MouseWheel>", _on_main_mousewheel)
+        
+        # ============ 在可滚动框架内创建内容区域 / Create content areas within scrollable frame ============
+        main_frame = ttk.Frame(scrollable_main_frame)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # ============ 上方区域：折线图 / Top region: Line charts ============
         line_frame = ttk.LabelFrame(main_frame, text="学生小码币变化趋势", padding=10)
         line_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # 创建Canvas和Scrollbar用于滚动 / Create Canvas and Scrollbar for scrolling
-        line_canvas = tk.Canvas(line_frame, bg='white')
-        line_scrollbar = ttk.Scrollbar(line_frame, orient="vertical", command=line_canvas.yview)
-        scrollable_line_frame = ttk.Frame(line_canvas)
-        
-        scrollable_line_frame.bind(
-            "<Configure>",
-            lambda e: line_canvas.configure(scrollregion=line_canvas.bbox("all"))
-        )
-        
-        line_canvas.create_window((0, 0), window=scrollable_line_frame, anchor="nw")
-        line_canvas.configure(yscrollcommand=line_scrollbar.set)
-        
-        line_canvas.pack(side="left", fill="both", expand=True)
-        line_scrollbar.pack(side="right", fill="y")
-        
-        # 绑定鼠标滚轮事件 / Bind mouse wheel event
-        def _on_mousewheel(event):
-            line_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        line_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        # 折线图容器（不再需要单独的滚动，使用整体滚动）
+        # / Line chart container (no separate scrolling needed, use overall scrolling)
+        scrollable_line_frame = ttk.Frame(line_frame)
+        scrollable_line_frame.pack(fill=tk.BOTH, expand=True)
         
         # ============ 根据屏幕尺寸自适应计算图表大小 / Adaptively calculate chart size based on screen ============
         # 计算可用宽度（转换为英寸，DPI通常为100）/ Calculate available width (convert to inches, DPI usually 100)
         dpi = 100
-        available_width_inches = (window_width - 80) / dpi  # 减去边距 / Minus margins
+        available_width_inches = (window_width - 100) / dpi  # 减去边距和滚动条宽度 / Minus margins and scrollbar width
         
-        # 每行高度根据屏幕高度自适应，确保每行的折线图完整显示 / Row height adapts to screen height, ensuring complete display
-        # 折线图区域占窗口高度的60%，柱状图占25%，其他控件占15%
-        line_area_height = window_height * 0.6  # 折线图区域更大 / Line chart area larger
-        line_height_per_row = max(3.0, line_area_height / dpi / max(1, line_chart_rows))
+        # 优化图表高度计算，确保在小屏幕（如150%缩放的1920x1080）上也能完整显示
+        # / Optimize chart height calculation for small screens (e.g., 1920x1080 with 150% scaling)
+        # 每行折线图高度：小屏幕使用更紧凑的布局
+        # / Line chart height per row: use more compact layout for small screens
+        if screen_height <= 800:
+            # 小屏幕：每行3英寸，紧凑布局 / Small screen: 3 inches per row, compact layout
+            line_height_per_row = 3.0
+        elif screen_height <= 1080:
+            # 中等屏幕：每行3.5英寸 / Medium screen: 3.5 inches per row
+            line_height_per_row = 3.5
+        else:
+            # 大屏幕：每行4英寸 / Large screen: 4 inches per row
+            line_height_per_row = 4.0
+        
         total_line_height = line_chart_rows * line_height_per_row
         
         # 创建折线图Figure，宽度自适应屏幕 / Create line chart figure with adaptive width
@@ -787,7 +841,14 @@ class ClassDetailView(ttk.Frame):
         bar_frame.pack(fill=tk.X, padx=5, pady=5)  # 不使用expand，让柱状图区域更小
         
         # 创建柱状图Figure，高度更小且自适应屏幕 / Create bar chart figure with smaller adaptive height
-        bar_chart_height = max(3.0, (window_height * 0.25) / dpi)  # 柱状图区域占25%，更小 / Bar chart area takes 25%, smaller
+        # 根据屏幕大小调整柱状图高度 / Adjust bar chart height based on screen size
+        if screen_height <= 800:
+            bar_chart_height = 3.0  # 小屏幕：3英寸 / Small screen: 3 inches
+        elif screen_height <= 1080:
+            bar_chart_height = 3.5  # 中等屏幕：3.5英寸 / Medium screen: 3.5 inches
+        else:
+            bar_chart_height = 4.0  # 大屏幕：4英寸 / Large screen: 4 inches
+        
         fig_bar = plt.figure(figsize=(available_width_inches, bar_chart_height))
         
         ax_bar = fig_bar.add_subplot(111)
@@ -823,11 +884,16 @@ class ClassDetailView(ttk.Frame):
         bar_canvas_widget.draw()
         bar_canvas_widget.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # 添加关闭按钮 / Add close button
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(pady=5)
-        close_button = ttk.Button(button_frame, text="关闭", command=chart_window.destroy)
-        close_button.pack()
+        # 底部提示信息（替代原关闭按钮）/ Bottom hint message (replaces original close button)
+        hint_frame = ttk.Frame(main_frame)
+        hint_frame.pack(pady=10)
+        hint_label = ttk.Label(
+            hint_frame, 
+            text="💡 提示：使用鼠标滚轮滚动查看所有图表，点击右上角按钮关闭窗口",
+            font=("Arial", 9),
+            foreground="gray"
+        )
+        hint_label.pack()
 
     def reset(self) -> None:
         """重置班级详情视图 / Reset class detail view"""
