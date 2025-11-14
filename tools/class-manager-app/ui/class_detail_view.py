@@ -91,10 +91,11 @@ class ClassDetailView(ttk.Frame):
             height=15,
         )
 
-        # 通过样式配置增加行高 / Increase row height through style configuration
+        # 通过样式配置增加行高和标题行高 / Increase row height and heading height through style configuration
         style = ttk.Style()
-        style.configure("Treeview", rowheight=40)  # 设置行高为40像素
-        style.configure("Treeview.Heading", font=("Arial", 10, "bold"))  # 设置标题字体
+        style.configure("Treeview", rowheight=40)  # 设置数据行高为40像素
+        style.configure("Treeview.Heading", font=("Arial", 10, "bold"), 
+                       padding=(10, 8))  # 设置标题字体和内边距，增加标题行高度
 
         # 定义列 / Define columns
         self.tree.heading("name", text="学生名字")

@@ -52,30 +52,44 @@ class LoginView(ttk.Frame):
         # 启动标题渐变动画
         self.after(120, self._animate_title_gradient)
 
-        # 账号输入框 / Username input
-        username_frame = ttk.Frame(self, style="TFrame")
-        username_frame.pack(fill=tk.X, pady=15)
+        # 预留300x300圆角图片位置 / Reserve 300x300 rounded image position
+        # TODO: 在此处添加300x300的圆角图片，图片路径替换下面的注释
+        # 示例代码：
+        # from PIL import Image, ImageTk
+        # image = Image.open("path/to/rounded_image.png")
+        # image = image.resize((300, 300), Image.Resampling.LANCZOS)
+        # photo = ImageTk.PhotoImage(image)
+        # image_label = ttk.Label(self, image=photo)
+        # image_label.image = photo  # 保持引用
+        # image_label.pack(pady=20)
+        
+        # 图片占位符标签 / Image placeholder label
+        image_placeholder = ttk.Label(self, text="图片位置 (300x300)", font=("Arial", 12), 
+                                     background="lightgray", foreground="gray")
+        image_placeholder.pack(pady=20)
 
-        username_label = ttk.Label(username_frame, text="账号", font=("Arial", 11))
-        username_label.pack(side=tk.LEFT, padx=(0, 15))
+        # 账号密码输入容器 / Username and password input container
+        input_container = ttk.Frame(self)
+        input_container.pack(pady=20)
+
+        # 账号输入框 / Username input
+        username_label = ttk.Label(input_container, text="账号", font=("Arial", 11))
+        username_label.grid(row=0, column=0, padx=(0, 15), pady=10, sticky="e")
 
         self.username_var = tk.StringVar()
-        self.username_entry = ttk.Entry(username_frame, textvariable=self.username_var, width=20)
-        self.username_entry.pack(side=tk.LEFT)
+        self.username_entry = ttk.Entry(input_container, textvariable=self.username_var, width=20)
+        self.username_entry.grid(row=0, column=1, pady=10)
         self.username_entry.focus()
 
         # 密码输入框 / Password input
-        password_frame = ttk.Frame(self, style="TFrame")
-        password_frame.pack(fill=tk.X, pady=15)
-
-        password_label = ttk.Label(password_frame, text="密码", font=("Arial", 11))
-        password_label.pack(side=tk.LEFT, padx=(0, 15))
+        password_label = ttk.Label(input_container, text="密码", font=("Arial", 11))
+        password_label.grid(row=1, column=0, padx=(0, 15), pady=10, sticky="e")
 
         self.password_var = tk.StringVar()
         self.password_entry = ttk.Entry(
-            password_frame, textvariable=self.password_var, show="*", width=20
+            input_container, textvariable=self.password_var, show="*", width=20
         )
-        self.password_entry.pack(side=tk.LEFT)
+        self.password_entry.grid(row=1, column=1, pady=10)
 
         # 输入内容仅允许英文字符 / Restrict input to ASCII characters
         vcmd = (self.register(self._validate_ascii), "%P")

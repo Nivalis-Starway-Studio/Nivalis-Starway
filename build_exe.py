@@ -49,6 +49,8 @@ def main():
         "--distpath", str(output_dir),  # 输出目录 / Output directory
         "--workpath", str(build_dir),  # 构建工作目录 / Build work directory
         "--specpath", str(project_root),  # spec文件位置 / Spec file location
+        "--hidden-import", "matplotlib.backends.backend_tkagg",  # 确保matplotlib后端包含
+        "--hidden-import", "PIL.Image",  # 确保PIL支持
         str(main_file),
     ]
     

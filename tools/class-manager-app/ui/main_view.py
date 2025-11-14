@@ -65,6 +65,12 @@ class MainView(ttk.Frame):
         button_frame = ttk.Frame(control_frame)
         button_frame.pack(side=tk.RIGHT)
 
+        # 新增班级按钮 / Add new classroom button
+        add_class_button = ttk.Button(
+            button_frame, text="新增班级", command=self.add_classroom
+        )
+        add_class_button.pack(side=tk.LEFT, padx=5)
+
         # 退出登录 / Logout
         logout_button = ttk.Button(
             button_frame, text="退出登录", command=self.logout
