@@ -102,10 +102,10 @@ class ClassDetailView(ttk.Frame):
         
         # 获取周的日期范围 / Get week date ranges
         week_labels = self._get_week_labels()
-        self.tree.heading("week_minus2", text=f"上上周\n{week_labels[0]}")
-        self.tree.heading("week_minus1", text=f"上周\n{week_labels[1]}")
-        self.tree.heading("week_0", text=f"本周\n{week_labels[2]}")
-        self.tree.heading("total", text="总小码币\n累计")
+        self.tree.heading("week_minus2", text=f"上上周 {week_labels[0]}")
+        self.tree.heading("week_minus1", text=f"上周 {week_labels[1]}")
+        self.tree.heading("week_0", text=f"本周 {week_labels[2]}")
+        self.tree.heading("total", text="总小码币/累计")
 
         self.tree.column("name", width=120, anchor="w")
         self.tree.column("week_minus2", width=180, anchor="center")
@@ -594,15 +594,17 @@ class ClassDetailView(ttk.Frame):
         chart_window.transient(self.winfo_toplevel())
         chart_window.grab_set()
         
-        # 获取班级数据 / Get classroom data
-        classroom = self.controller.data_store.get_classroom(self.current_class_id)
+        # 重新加载班级数据以获取最新的学生列表（包括新添加的学生）
+        # / Reload classroom data to get the latest student list (including newly added students)
         data_store = self.controller.data_store
+        classroom = data_store.get_classroom(self.current_class_id)
         
         # 准备数据 / Prepare data
         student_names = []
         total_coins = []
+        all_students = list(classroom.get_all_students())
         
-        for student in classroom.get_all_students():
+        for student in all_students:
             student_names.append(student.name)
             total_coins.append(data_store.get_student_total(student))
         
@@ -624,7 +626,7 @@ class ClassDetailView(ttk.Frame):
         line_gs = fig.add_gridspec(line_chart_rows, 1, top=0.7, bottom=0.35, hspace=0.4)
         line_axes = []
         
-        for idx, student in enumerate(classroom.get_all_students()):
+        for idx, student in enumerate(all_students):
             if idx >= line_chart_rows:
                 break
                 
