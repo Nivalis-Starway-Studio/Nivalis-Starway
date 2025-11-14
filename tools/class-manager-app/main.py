@@ -49,12 +49,12 @@ class ClassManagerApp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
+        self.container = container
 
-        # 实例化所有视图 / Instantiate all views
-        for F in (LoginView, MainView, ClassDetailView):
-            frame = F(container, self)
-            self.frames[F.__name__] = frame
-            frame.grid(row=0, column=0, sticky="nsew")
+        # 只创建登录视图 / Only create login view initially
+        frame = LoginView(container, self)
+        self.frames["LoginView"] = frame
+        frame.grid(row=0, column=0, sticky="nsew")
 
         # 显示登录视图 / Show login view
         self.show_frame("LoginView")
@@ -90,6 +90,18 @@ class ClassManagerApp(tk.Tk):
             name: 框架名称 / Frame name
         """
         frame = self.frames.get(name)
+        
+        # 如果视图不存在，按需创建 / If frame doesn't exist, create it on demand
+        if not frame:
+            if name == "MainView":
+                frame = MainView(self.container, self)
+                self.frames["MainView"] = frame
+                frame.grid(row=0, column=0, sticky="nsew")
+            elif name == "ClassDetailView":
+                frame = ClassDetailView(self.container, self)
+                self.frames["ClassDetailView"] = frame
+                frame.grid(row=0, column=0, sticky="nsew")
+        
         if frame:
             frame.tkraise()
 

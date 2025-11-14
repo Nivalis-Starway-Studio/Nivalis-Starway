@@ -89,8 +89,12 @@ class ClassDetailView(ttk.Frame):
             columns=columns,
             show="headings",
             height=15,
-            rowheight=40,  # 增加行高以适配两行标题 / Increase row height for two-line headers
         )
+
+        # 通过样式配置增加行高 / Increase row height through style configuration
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=40)  # 设置行高为40像素
+        style.configure("Treeview.Heading", font=("Arial", 10, "bold"))  # 设置标题字体
 
         # 定义列 / Define columns
         self.tree.heading("name", text="学生名字")
