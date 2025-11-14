@@ -24,14 +24,28 @@ class ClassManagerApp(tk.Tk):
         # 设置窗口属性 / Set window properties
         self.title("课堂管理系统")
         
-        # 设置全屏显示 / Set fullscreen display
-        self.state('zoomed')  # Windows全屏
-        # 对于Linux/Mac，可以使用：
-        # self.attributes('-zoomed', True)
+        # 获取屏幕分辨率并自适应窗口大小 / Get screen resolution and adapt window size
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
         
-        # 备用尺寸设置 / Backup size settings
-        self.geometry("1200x800")
-        self.minsize(1000, 700)
+        # 窗口占屏幕的90%（留出边距）/ Window takes 90% of screen (leave margins)
+        window_width = int(screen_width * 0.9)
+        window_height = int(screen_height * 0.9)
+        
+        # 计算窗口居中位置 / Calculate centered position
+        x_offset = (screen_width - window_width) // 2
+        y_offset = (screen_height - window_height) // 2
+        
+        # 设置窗口大小和位置 / Set window size and position
+        self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
+        
+        # 设置最小尺寸（自适应）/ Set minimum size (adaptive)
+        min_width = max(800, int(screen_width * 0.5))
+        min_height = max(600, int(screen_height * 0.5))
+        self.minsize(min_width, min_height)
+        
+        # 设置最大化显示 / Set maximized display
+        self.state('zoomed')  # Windows全屏
 
         # 初始化数据存储 / Initialize data store
         self.data_store = ClassDataStore()

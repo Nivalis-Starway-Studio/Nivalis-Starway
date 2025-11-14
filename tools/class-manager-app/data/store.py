@@ -327,6 +327,39 @@ class ClassDataStore:
         """
         return student.cumulative_coins + student.weekly_coins
 
+    def update_student_total_coins(
+        self, class_id: str, student_name: str, new_total: int
+    ) -> bool:
+        """
+        更新学生的总小码币数量
+        / Update student's total coins
+        
+        Args:
+            class_id: 班级ID / Classroom ID
+            student_name: 学生姓名 / Student name
+            new_total: 新的总小码币数量 / New total coins
+            
+        Returns:
+            bool: 是否更新成功 / Whether the update succeeded
+        """
+        classroom = self.get_classroom(class_id)
+        if not classroom:
+            return False
+        
+        student = classroom.get_student_by_name(student_name)
+        if not student:
+            return False
+        
+        new_total = max(0, new_total)
+        
+        # 总小码币 = 累计币 + 本周币
+        # 更新时保持本周币不变，只修改累计币
+        # new_total = cumulative + weekly => cumulative = new_total - weekly
+        student.cumulative_coins = max(0, new_total - student.weekly_coins)
+        
+        self.save_data()
+        return True
+
     def get_week_coins(self, class_id: str, week_offset: int = 0) -> Dict[str, int]:
         """
         获取指定周的币数数据 / Get coin data for a specific week

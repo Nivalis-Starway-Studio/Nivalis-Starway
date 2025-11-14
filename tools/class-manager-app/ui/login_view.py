@@ -25,19 +25,27 @@ class LoginView(ttk.Frame):
         # 设置样式 / Set style (ttk.Frame不支持background参数)
         self.configure(padding="20")
 
+        # 创建主容器用于垂直居中 / Create main container for vertical centering
+        main_container = ttk.Frame(self)
+        main_container.place(relx=0.5, rely=0.5, anchor="center")
+
         # 创建渐变色标题 - 西瓜老师 / Create gradient title - XiguaTeacher
-        self.title_canvas = Canvas(self, width=400, height=80, bg="white", highlightthickness=0)
-        self.title_canvas.pack(pady=(20, 40))
+        self.title_canvas = Canvas(main_container, width=400, height=100, bg="white", highlightthickness=0)
+        self.title_canvas.pack(pady=(0, 50))
         
-        # 绘制渐变色文字 / Draw gradient text
+        # 绘制渐变色文字（居中） / Draw gradient text (centered)
         self._gradient_colors = ["#2E7D32", "#388E3C", "#43A047", "#4CAF50", "#66BB6A", "#81C784"]
         text = "西瓜老师"
-        font_size = 32
+        font_size = 36
         self._title_items = []
         
+        # 计算文字总宽度以实现居中 / Calculate total text width for centering
+        total_width = len(text) * 55
+        start_x = (400 - total_width) / 2 + 27.5
+        
         for i, char in enumerate(text):
-            x = 80 + i * 50
-            y = 40
+            x = start_x + i * 55
+            y = 50
             color = self._gradient_colors[i % len(self._gradient_colors)]
             item = self.title_canvas.create_text(
                 x,
@@ -49,27 +57,11 @@ class LoginView(ttk.Frame):
             )
             self._title_items.append(item)
         
-        # 启动标题渐变动画
+        # 启动标题渐变动画 / Start title gradient animation
         self.after(120, self._animate_title_gradient)
 
-        # 预留300x300圆角图片位置 / Reserve 300x300 rounded image position
-        # TODO: 在此处添加300x300的圆角图片，图片路径替换下面的注释
-        # 示例代码：
-        # from PIL import Image, ImageTk
-        # image = Image.open("path/to/rounded_image.png")
-        # image = image.resize((300, 300), Image.Resampling.LANCZOS)
-        # photo = ImageTk.PhotoImage(image)
-        # image_label = ttk.Label(self, image=photo)
-        # image_label.image = photo  # 保持引用
-        # image_label.pack(pady=20)
-        
-        # 图片占位符标签 / Image placeholder label
-        image_placeholder = ttk.Label(self, text="图片位置 (300x300)", font=("Arial", 12), 
-                                     background="lightgray", foreground="gray")
-        image_placeholder.pack(pady=20)
-
-        # 账号密码输入容器 / Username and password input container
-        input_container = ttk.Frame(self)
+        # 账号密码输入容器（居中对齐）/ Username and password input container (centered)
+        input_container = ttk.Frame(main_container)
         input_container.pack(pady=20)
 
         # 账号输入框 / Username input
@@ -99,12 +91,12 @@ class LoginView(ttk.Frame):
         # 绑定回车键 / Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self.login())
 
-        # 登录按钮 / Login button - 居中显示
-        button_frame = ttk.Frame(self)
-        button_frame.pack(pady=20)
+        # 登录按钮（居中显示）/ Login button (centered)
+        button_frame = ttk.Frame(main_container)
+        button_frame.pack(pady=30)
 
         login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
-        login_button.pack(side=tk.LEFT, padx=5)
+        login_button.pack()
 
     def _validate_ascii(self, text: str) -> bool:
         """验证输入只包含ASCII字符 / Validate input contains only ASCII characters"""

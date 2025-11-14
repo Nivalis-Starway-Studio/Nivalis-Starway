@@ -315,8 +315,8 @@ class ClassDetailView(ttk.Frame):
 
     def on_cell_double_click(self, event) -> None:
         """
-        处理单元格双击事件 - 编辑币数
-        / Handle cell double-click event - Edit coins
+        处理单元格双击事件 - 编辑币数（支持周币和总币修改）
+        / Handle cell double-click event - Edit coins (supports weekly and total coins)
         """
         item = self.tree.identify_row(event.y)
         column = self.tree.identify_column(event.x)
@@ -327,11 +327,12 @@ class ClassDetailView(ttk.Frame):
         values = self.tree.item(item, "values")
         student_name = values[0]
 
-        # 定义列索引对应的周偏移量
-        column_map = {"#2": -2, "#3": -1, "#4": 0}  # 上上周、上周、本周
+        # 定义列索引对应的周偏移量（上上周、上周、本周）
+        column_map = {"#2": -2, "#3": -1, "#4": 0}
         index_map = {"#2": 1, "#3": 2, "#4": 3}
 
         if column in column_map:
+            # 修改周币 / Edit weekly coins
             week_offset = column_map[column]
             value_index = index_map[column]
             try:
@@ -339,7 +340,7 @@ class ClassDetailView(ttk.Frame):
             except (TypeError, ValueError):
                 current_value = 0
 
-            # 弹出输入对话框
+            # 弹出输入对话框 / Show input dialog
             new_value = simpledialog.askinteger(
                 "修改小码币",
                 f"修改 {student_name} 的小码币数量\n（当前: {current_value}）",
@@ -349,13 +350,38 @@ class ClassDetailView(ttk.Frame):
             )
 
             if new_value is not None:
-                # 更新数据
+                # 更新数据 / Update data
                 if self._update_week_coins(student_name, week_offset, new_value):
                     self.refresh_student_table()
                     self.update_statistics()
                     messagebox.showinfo("更新成功", f"已更新 {student_name} 的小码币数量")
                 else:
                     messagebox.showerror("更新失败", "未能更新小码币，请重试。")
+        
+        elif column == "#5":
+            # 修改总小码币 / Edit total coins
+            try:
+                current_total = int(values[4])
+            except (TypeError, ValueError):
+                current_total = 0
+
+            # 弹出输入对话框 / Show input dialog
+            new_total = simpledialog.askinteger(
+                "修改总小码币",
+                f"修改 {student_name} 的总小码币数量\n（当前: {current_total}）",
+                initialvalue=current_total,
+                minvalue=0,
+                maxvalue=10000,
+            )
+
+            if new_total is not None:
+                # 更新总小码币 / Update total coins
+                if self._update_total_coins(student_name, new_total):
+                    self.refresh_student_table()
+                    self.update_statistics()
+                    messagebox.showinfo("更新成功", f"已更新 {student_name} 的总小码币数量")
+                else:
+                    messagebox.showerror("更新失败", "未能更新总小码币，请重试。")
 
     def _update_week_coins(
         self, student_name: str, week_offset: int, coins: int
@@ -365,15 +391,31 @@ class ClassDetailView(ttk.Frame):
         / Update coins for specified week
 
         Args:
-            student_name: 学生名字
-            week_offset: 周偏移量（-2=上上周，-1=上周，0=本周）
-            coins: 币数
+            student_name: 学生名字 / Student name
+            week_offset: 周偏移量（-2=上上周，-1=上周，0=本周）/ Week offset
+            coins: 币数 / Coins
 
         Returns:
             bool: 是否更新成功 / Whether the update succeeded
         """
         return self.controller.data_store.update_student_week_coins(
             self.current_class_id, student_name, week_offset, coins
+        )
+
+    def _update_total_coins(self, student_name: str, total_coins: int) -> bool:
+        """
+        更新学生的总小码币数量
+        / Update student's total coins
+
+        Args:
+            student_name: 学生名字 / Student name
+            total_coins: 总小码币数量 / Total coins
+
+        Returns:
+            bool: 是否更新成功 / Whether the update succeeded
+        """
+        return self.controller.data_store.update_student_total_coins(
+            self.current_class_id, student_name, total_coins
         )
 
     def update_student_coins(self) -> None:
@@ -441,7 +483,12 @@ class ClassDetailView(ttk.Frame):
         """
         dialog = tk.Toplevel(self)
         dialog.title("添加学生")
-        dialog.geometry("300x150")
+        
+        # 自适应对话框大小 / Adaptive dialog size
+        screen_width = dialog.winfo_screenwidth()
+        dialog_width = max(300, int(screen_width * 0.2))
+        dialog.geometry(f"{dialog_width}x150")
+        
         dialog.transient(self.winfo_toplevel())
         dialog.grab_set()
 
@@ -486,7 +533,12 @@ class ClassDetailView(ttk.Frame):
 
         dialog = tk.Toplevel(self)
         dialog.title("修改学生名字")
-        dialog.geometry("300x150")
+        
+        # 自适应对话框大小 / Adaptive dialog size
+        screen_width = dialog.winfo_screenwidth()
+        dialog_width = max(300, int(screen_width * 0.2))
+        dialog.geometry(f"{dialog_width}x150")
+        
         dialog.transient(self.winfo_toplevel())
         dialog.grab_set()
 

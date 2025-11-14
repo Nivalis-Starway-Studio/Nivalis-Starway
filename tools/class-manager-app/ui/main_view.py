@@ -247,7 +247,12 @@ class MainView(ttk.Frame):
         """
         dialog = tk.Toplevel(self)
         dialog.title("添加班级")
-        dialog.geometry("300x150")
+        
+        # 自适应对话框大小 / Adaptive dialog size
+        screen_width = dialog.winfo_screenwidth()
+        dialog_width = max(300, int(screen_width * 0.2))
+        dialog.geometry(f"{dialog_width}x150")
+        
         dialog.transient(self.winfo_toplevel())
         dialog.grab_set()
 
@@ -286,7 +291,12 @@ class MainView(ttk.Frame):
         
         dialog = tk.Toplevel(self)
         dialog.title("修改班级")
-        dialog.geometry("300x150")
+        
+        # 自适应对话框大小 / Adaptive dialog size
+        screen_width = dialog.winfo_screenwidth()
+        dialog_width = max(300, int(screen_width * 0.2))
+        dialog.geometry(f"{dialog_width}x150")
+        
         dialog.transient(self.winfo_toplevel())
         dialog.grab_set()
 
