@@ -1,23 +1,20 @@
 # Dependency directories
 node_modules/
 
-# Build output
+# Build output (构建输出)
 build/
-dist/*
-!dist/README.md
-!dist/.gitkeep
+dist/
+*.spec
 
-# Temporary files
+# Temporary files (临时文件)
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Generated assets
 *.tmp
 
-# Python artifacts
+# Logs (日志文件)
+*.log
+
+# Python artifacts (Python编译文件)
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,4 +25,18 @@ __pycache__/
 .venv
 venv/
 ENV/
+
+# Application data (应用数据文件)
 storage_data/
+
+# IDE (开发工具)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files (操作系统文件)
+.DS_Store
+Thumbs.db
+desktop.ini
