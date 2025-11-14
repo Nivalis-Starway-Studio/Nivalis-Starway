@@ -86,8 +86,8 @@ class LoginView(ttk.Frame):
         self.password_entry.bind("<Return>", lambda e: self.login())
 
         # 登录按钮 / Login button - 居中显示
-        button_frame = ttk.Frame(self, style="TFrame")
-        button_frame.pack(pady=30)
+        button_frame = ttk.Frame(self)
+        button_frame.pack(pady=20)
 
         login_button = ttk.Button(button_frame, text="登录", command=self.login, width=15)
         login_button.pack(side=tk.LEFT, padx=5)

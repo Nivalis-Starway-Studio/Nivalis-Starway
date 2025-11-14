@@ -88,7 +88,8 @@ class ClassDetailView(ttk.Frame):
             tree_frame,
             columns=columns,
             show="headings",
-            height=12,
+            height=15,
+            rowheight=40,  # 增加行高以适配两行标题 / Increase row height for two-line headers
         )
 
         # 定义列 / Define columns
@@ -101,11 +102,11 @@ class ClassDetailView(ttk.Frame):
         self.tree.heading("week_0", text=f"本周\n{week_labels[2]}")
         self.tree.heading("total", text="总小码币\n累计")
 
-        self.tree.column("name", width=150, anchor="w")
-        self.tree.column("week_minus2", width=150, anchor="center")
-        self.tree.column("week_minus1", width=150, anchor="center")
-        self.tree.column("week_0", width=150, anchor="center")
-        self.tree.column("total", width=150, anchor="center")
+        self.tree.column("name", width=120, anchor="w")
+        self.tree.column("week_minus2", width=180, anchor="center")
+        self.tree.column("week_minus1", width=180, anchor="center")
+        self.tree.column("week_0", width=180, anchor="center")
+        self.tree.column("total", width=140, anchor="center")
 
         # 绑定行选择事件和右键菜单 / Bind row selection and right-click menu
         self.tree.bind("<ButtonRelease-1>", self.on_row_selected)
@@ -167,10 +168,19 @@ class ClassDetailView(ttk.Frame):
         item = self.tree.identify_row(event.y)
         column = self.tree.identify_column(event.x)
 
-        if item and column == "#1":  # 只在第一列（人名列）显示菜单
-            self.tree.selection_set(item)
+        if item:  # 允许在任何列右键点击以选中学生
+            self.tree.selection_set(item)  # 选中该行
             values = self.tree.item(item, "values")
             student_name = values[0]
+            
+            # 更新选中学生状态 / Update selected student state
+            self.selected_student = student_name
+            self.student_display.config(text=self.selected_student)
+            try:
+                weekly_coins = int(values[3])
+            except (TypeError, ValueError):
+                weekly_coins = 0
+            self.coins_var.set(str(weekly_coins))
 
             context_menu = tk.Menu(self, tearoff=0)
             context_menu.add_command(
@@ -561,8 +571,8 @@ class ClassDetailView(ttk.Frame):
 
     def show_chart_statistics(self) -> None:
         """
-        显示图表统计窗口
-        / Show chart statistics window
+        显示图表统计窗口 - 包含折线图和柱状图
+        / Show chart statistics window - includes line charts and bar chart
         """
         if not CHART_AVAILABLE:
             messagebox.showerror("功能不可用", "图表统计功能需要安装matplotlib库。")
@@ -575,7 +585,7 @@ class ClassDetailView(ttk.Frame):
         # 创建新窗口 / Create new window
         chart_window = tk.Toplevel(self)
         chart_window.title("班级小码币统计图表")
-        chart_window.geometry("1000x600")
+        chart_window.geometry("1400x900")
         chart_window.transient(self.winfo_toplevel())
         chart_window.grab_set()
         
@@ -585,38 +595,81 @@ class ClassDetailView(ttk.Frame):
         
         # 准备数据 / Prepare data
         student_names = []
-        weekly_coins = []
         total_coins = []
         
         for student in classroom.get_all_students():
             student_names.append(student.name)
-            weekly_coins.append(data_store.get_student_week_value(student, 0))
             total_coins.append(data_store.get_student_total(student))
         
         # 设置中文字体 / Set Chinese font
         plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
         plt.rcParams['axes.unicode_minus'] = False
         
-        # 创建图表 / Create charts
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        # 创建图表布局 / Create chart layout
+        # 上面：3行折线图（每个学生一个）
+        # 下面：1行柱状图（总小码币统计）
+        fig = plt.figure(figsize=(14, 9))
         
-        # 本周小码币饼图 / Weekly coins pie chart
-        if weekly_coins and sum(weekly_coins) > 0:
-            wedges1, texts1, autotexts1 = ax1.pie(weekly_coins, labels=student_names, autopct='%1.1f%%', startangle=90)
-            ax1.set_title(f'{classroom.name} - 本周小码币分布', fontsize=14, fontweight='bold')
-        else:
-            ax1.text(0.5, 0.5, '本周暂无小码币数据', ha='center', va='center', fontsize=12)
-            ax1.set_title(f'{classroom.name} - 本周小码币分布', fontsize=14, fontweight='bold')
+        # 计算需要的行数（学生折线图）+ 1行柱状图
+        num_students = len(student_names)
+        line_chart_rows = min(3, num_students)  # 最多显示3个学生的折线图
+        total_rows = line_chart_rows + 1  # +1 for bar chart
         
-        # 总小码币饼图 / Total coins pie chart
-        if total_coins and sum(total_coins) > 0:
-            wedges2, texts2, autotexts2 = ax2.pie(total_coins, labels=student_names, autopct='%1.1f%%', startangle=90)
-            ax2.set_title(f'{classroom.name} - 总小码币分布', fontsize=14, fontweight='bold')
-        else:
-            ax2.text(0.5, 0.5, '暂无总小码币数据', ha='center', va='center', fontsize=12)
-            ax2.set_title(f'{classroom.name} - 总小码币分布', fontsize=14, fontweight='bold')
+        # 创建折线图 / Create line charts for each student
+        line_gs = fig.add_gridspec(line_chart_rows, 1, top=0.7, bottom=0.35, hspace=0.4)
+        line_axes = []
         
-        plt.tight_layout()
+        for idx, student in enumerate(classroom.get_all_students()):
+            if idx >= line_chart_rows:
+                break
+                
+            ax = fig.add_subplot(line_gs[idx])
+            line_axes.append(ax)
+            
+            # 获取三周数据 / Get three weeks data
+            week_minus2 = data_store.get_student_week_value(student, -2)
+            week_minus1 = data_store.get_student_week_value(student, -1)
+            week_0 = data_store.get_student_week_value(student, 0)
+            
+            weeks = ['上上周', '上周', '本周']
+            coins = [week_minus2, week_minus1, week_0]
+            
+            # 绘制折线图 / Plot line chart
+            ax.plot(weeks, coins, marker='o', linewidth=2, markersize=8, color='#2E7D32')
+            ax.fill_between(range(len(weeks)), coins, alpha=0.3, color='#81C784')
+            ax.set_title(f'{student.name} - 小码币变化趋势', fontsize=12, fontweight='bold')
+            ax.set_ylabel('小码币数量', fontsize=10)
+            ax.grid(True, alpha=0.3)
+            
+            # 在每个点上显示数值 / Show values on each point
+            for i, coin in enumerate(coins):
+                ax.text(i, coin, str(coin), ha='center', va='bottom', fontsize=10)
+        
+        # 创建柱状图 / Create bar chart for total coins
+        bar_gs = fig.add_gridspec(1, 1, top=0.3, bottom=0.05, hspace=0.2)
+        ax_bar = fig.add_subplot(bar_gs[0])
+        
+        # 准备数据 / Prepare bar chart data
+        colors = ['#2E7D32', '#388E3C', '#43A047', '#4CAF50', '#66BB6A', '#81C784', '#A5D6A7']
+        bar_colors = [colors[i % len(colors)] for i in range(len(student_names))]
+        
+        bars = ax_bar.bar(student_names, total_coins, color=bar_colors, edgecolor='black', linewidth=1.5)
+        ax_bar.set_title(f'{classroom.name} - 各学生总小码币统计', fontsize=12, fontweight='bold')
+        ax_bar.set_ylabel('总小码币数量', fontsize=10)
+        ax_bar.set_xlabel('学生名字', fontsize=10)
+        ax_bar.grid(True, alpha=0.3, axis='y')
+        
+        # 在柱子上显示数值 / Show values on bars
+        for bar in bars:
+            height = bar.get_height()
+            ax_bar.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{int(height)}',
+                       ha='center', va='bottom', fontsize=10, fontweight='bold')
+        
+        # 旋转x轴标签 / Rotate x-axis labels
+        ax_bar.tick_params(axis='x', rotation=45)
+        
+        plt.suptitle(f'班级小码币统计 - {classroom.name}', fontsize=14, fontweight='bold', y=0.98)
         
         # 将图表嵌入到Tkinter窗口 / Embed chart in Tkinter window
         canvas = FigureCanvasTkAgg(fig, chart_window)
