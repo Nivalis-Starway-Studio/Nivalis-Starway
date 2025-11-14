@@ -618,40 +618,66 @@ class ClassDetailView(ttk.Frame):
         plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
         plt.rcParams['axes.unicode_minus'] = False
         
-        # 计算需要的行数 - 显示所有学生的折线图 / Calculate rows needed - show all students' line charts
+        # 计算需要的行数 - 每行显示2个学生的折线图 / Calculate rows needed - 2 students per row
         num_students = len(student_names)
-        line_chart_rows = max(1, num_students)  # 每个学生一行折线图 / One line chart per student
+        line_chart_rows = max(1, (num_students + 1) // 2)  # 每行2个学生 / 2 students per row
+        
+        # ============ 创建主框架，划分两个区域 / Create main frame with two regions ============
+        main_frame = ttk.Frame(chart_window)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # ============ 上方区域：折线图（可滚动）/ Top region: Line charts (scrollable) ============
+        line_frame = ttk.LabelFrame(main_frame, text="学生小码币变化趋势", padding=10)
+        line_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 创建Canvas和Scrollbar用于滚动 / Create Canvas and Scrollbar for scrolling
+        line_canvas = tk.Canvas(line_frame, bg='white')
+        line_scrollbar = ttk.Scrollbar(line_frame, orient="vertical", command=line_canvas.yview)
+        scrollable_line_frame = ttk.Frame(line_canvas)
+        
+        scrollable_line_frame.bind(
+            "<Configure>",
+            lambda e: line_canvas.configure(scrollregion=line_canvas.bbox("all"))
+        )
+        
+        line_canvas.create_window((0, 0), window=scrollable_line_frame, anchor="nw")
+        line_canvas.configure(yscrollcommand=line_scrollbar.set)
+        
+        line_canvas.pack(side="left", fill="both", expand=True)
+        line_scrollbar.pack(side="right", fill="y")
+        
+        # 绑定鼠标滚轮事件 / Bind mouse wheel event
+        def _on_mousewheel(event):
+            line_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        line_canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
         # 根据学生数量动态计算图表高度 / Dynamically calculate figure height based on student count
-        # 每行折线图约占2.5英寸，加上柱状图约占3英寸
-        line_height_per_student = 2.5
-        bar_chart_height = 3
-        total_figure_height = line_chart_rows * line_height_per_student + bar_chart_height + 1
+        # 每行2个学生，每行高度约3.5英寸
+        line_height_per_row = 3.5
+        total_line_height = line_chart_rows * line_height_per_row
         
-        # 创建图表布局 / Create chart layout
-        fig = plt.figure(figsize=(14, total_figure_height))
+        # 创建折线图Figure / Create line chart figure
+        fig_line = plt.figure(figsize=(16, total_line_height))
         
-        # 计算折线图占比和柱状图占比 / Calculate proportion for line charts and bar chart
-        line_chart_height = line_chart_rows * line_height_per_student
-        top_position = 1.0 - (0.05)
-        bottom_line_position = bar_chart_height / total_figure_height + 0.05
-        top_line_position = 1.0 - (0.05)
-        
-        # 创建折线图 / Create line charts for each student
-        line_gs = fig.add_gridspec(
-            line_chart_rows, 1, 
-            top=top_line_position, 
-            bottom=bottom_line_position, 
-            hspace=0.35
+        # 使用GridSpec布局，每行2列 / Use GridSpec layout with 2 columns per row
+        line_gs = fig_line.add_gridspec(
+            line_chart_rows, 2,
+            hspace=0.35,
+            wspace=0.25,
+            left=0.06,
+            right=0.98,
+            top=0.95,
+            bottom=0.05
         )
-        line_axes = []
         
         # 使用颜色列表为不同学生的折线图着色 / Use color list to color different students' line charts
         colors_line = ['#2E7D32', '#1565C0', '#D32F2F', '#F57C00', '#7B1FA2', '#00796B', '#C2185B']
         
         for idx, student in enumerate(all_students):
-            ax = fig.add_subplot(line_gs[idx])
-            line_axes.append(ax)
+            row = idx // 2  # 行索引 / Row index
+            col = idx % 2   # 列索引 / Column index
+            
+            ax = fig_line.add_subplot(line_gs[row, col])
             
             # 获取三周数据 / Get three weeks data
             week_minus2 = data_store.get_student_week_value(student, -2)
@@ -663,7 +689,6 @@ class ClassDetailView(ttk.Frame):
             
             # 为每个学生选择不同的颜色 / Select different color for each student
             line_color = colors_line[idx % len(colors_line)]
-            fill_color = line_color.replace('D', '8').replace('2E', 'A5')  # 浅色填充 / Lighter fill color
             
             # 绘制折线图 / Plot line chart
             ax.plot(weeks, coins, marker='o', linewidth=2.5, markersize=8, color=line_color)
@@ -677,10 +702,28 @@ class ClassDetailView(ttk.Frame):
             for i, coin in enumerate(coins):
                 ax.text(i, coin, str(coin), ha='center', va='bottom', fontsize=9, fontweight='bold')
         
-        # 创建柱状图 / Create bar chart for total coins
-        bar_height_ratio = bar_chart_height / total_figure_height
-        bar_gs = fig.add_gridspec(1, 1, top=bottom_line_position, bottom=0.05, hspace=0.2)
-        ax_bar = fig.add_subplot(bar_gs[0])
+        # 如果学生数量是奇数，隐藏最后一个空位 / If odd number of students, hide last empty subplot
+        if num_students % 2 == 1:
+            last_ax = fig_line.add_subplot(line_gs[line_chart_rows - 1, 1])
+            last_ax.axis('off')
+        
+        fig_line.suptitle(f'学生小码币变化趋势 (共{num_students}个学生)', 
+                         fontsize=14, fontweight='bold')
+        
+        # 将折线图嵌入到滚动区域 / Embed line chart in scrollable area
+        line_canvas_widget = FigureCanvasTkAgg(fig_line, scrollable_line_frame)
+        line_canvas_widget.draw()
+        line_canvas_widget.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # ============ 下方区域：柱状图（固定高度）/ Bottom region: Bar chart (fixed height) ============
+        bar_frame = ttk.LabelFrame(main_frame, text="班级总小码币统计", padding=10)
+        bar_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 创建柱状图Figure / Create bar chart figure
+        bar_chart_height = 6  # 固定高度，确保有足够空间显示标签 / Fixed height for labels
+        fig_bar = plt.figure(figsize=(16, bar_chart_height))
+        
+        ax_bar = fig_bar.add_subplot(111)
         
         # 准备数据 / Prepare bar chart data
         colors_bar = ['#2E7D32', '#388E3C', '#43A047', '#4CAF50', '#66BB6A', '#81C784', '#A5D6A7', 
@@ -690,7 +733,7 @@ class ClassDetailView(ttk.Frame):
         bar_colors = [colors_bar[i % len(colors_bar)] for i in range(len(student_names))]
         
         bars = ax_bar.bar(student_names, total_coins, color=bar_colors, edgecolor='black', linewidth=1.5)
-        ax_bar.set_title(f'{classroom.name} - 各学生总小码币统计', fontsize=12, fontweight='bold')
+        ax_bar.set_title(f'{classroom.name} - 各学生总小码币统计', fontsize=12, fontweight='bold', pad=15)
         ax_bar.set_ylabel('总小码币数量', fontsize=10)
         ax_bar.set_xlabel('学生名字', fontsize=10)
         ax_bar.grid(True, alpha=0.3, axis='y')
@@ -702,20 +745,32 @@ class ClassDetailView(ttk.Frame):
                        f'{int(height)}',
                        ha='center', va='bottom', fontsize=9, fontweight='bold')
         
-        # 旋转x轴标签，让其适应更多学生 / Rotate x-axis labels to accommodate more students
-        ax_bar.tick_params(axis='x', rotation=45 if len(student_names) <= 10 else 90)
+        # 根据学生数量自适应调整x轴标签显示 / Adaptive x-axis label display based on student count
+        if len(student_names) <= 5:
+            # 学生少，不旋转，标签水平显示 / Few students, no rotation
+            ax_bar.tick_params(axis='x', rotation=0, labelsize=9)
+        elif len(student_names) <= 10:
+            # 中等数量学生，45度旋转 / Medium number, 45 degree rotation
+            ax_bar.tick_params(axis='x', rotation=45, labelsize=9)
+            plt.setp(ax_bar.xaxis.get_majorticklabels(), ha='right')
+        else:
+            # 学生多，90度旋转，确保显示完整 / Many students, 90 degree rotation for full display
+            ax_bar.tick_params(axis='x', rotation=90, labelsize=8)
+            plt.setp(ax_bar.xaxis.get_majorticklabels(), ha='center')
         
-        plt.suptitle(f'班级小码币统计 - {classroom.name} (共{num_students}个学生)', 
-                     fontsize=14, fontweight='bold', y=0.995)
+        # 调整布局，确保标签不被截断 / Adjust layout to prevent label cutoff
+        fig_bar.tight_layout(rect=[0, 0.03, 1, 0.97])
         
-        # 将图表嵌入到Tkinter窗口 / Embed chart in Tkinter window
-        canvas = FigureCanvasTkAgg(fig, chart_window)
-        canvas.draw()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # 将柱状图嵌入到固定区域 / Embed bar chart in fixed area
+        bar_canvas_widget = FigureCanvasTkAgg(fig_bar, bar_frame)
+        bar_canvas_widget.draw()
+        bar_canvas_widget.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
         # 添加关闭按钮 / Add close button
-        close_button = ttk.Button(chart_window, text="关闭", command=chart_window.destroy)
-        close_button.pack(pady=10)
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=5)
+        close_button = ttk.Button(button_frame, text="关闭", command=chart_window.destroy)
+        close_button.pack()
 
     def reset(self) -> None:
         """重置班级详情视图 / Reset class detail view"""
