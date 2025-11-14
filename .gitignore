@@ -2,8 +2,10 @@
 node_modules/
 
 # Build output
-dist/
 build/
+dist/*
+!dist/README.md
+!dist/.gitkeep
 
 # Temporary files
 .DS_Store
