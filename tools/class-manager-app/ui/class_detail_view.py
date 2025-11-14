@@ -591,10 +591,19 @@ class ClassDetailView(ttk.Frame):
         chart_window = tk.Toplevel(self)
         chart_window.title("班级小码币统计图表")
         
-        # 获取屏幕尺寸，设置窗口为全屏 / Get screen size and set window to fullscreen
+        # ============ 获取屏幕尺寸并自适应窗口 / Get screen size and adapt window ============
         screen_width = chart_window.winfo_screenwidth()
         screen_height = chart_window.winfo_screenheight()
-        chart_window.geometry(f"{screen_width}x{screen_height}+0+0")
+        
+        # 窗口占屏幕的90%（留出边距）/ Window takes 90% of screen (leave margins)
+        window_width = int(screen_width * 0.9)
+        window_height = int(screen_height * 0.9)
+        
+        # 计算窗口居中位置 / Calculate centered position
+        x_offset = (screen_width - window_width) // 2
+        y_offset = (screen_height - window_height) // 2
+        
+        chart_window.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
         chart_window.state('zoomed')  # 最大化窗口 / Maximize window
         
         chart_window.transient(self.winfo_toplevel())
@@ -651,13 +660,19 @@ class ClassDetailView(ttk.Frame):
             line_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         line_canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
-        # 根据学生数量动态计算图表高度 / Dynamically calculate figure height based on student count
-        # 每行2个学生，每行高度约3.5英寸
-        line_height_per_row = 3.5
+        # ============ 根据屏幕尺寸自适应计算图表大小 / Adaptively calculate chart size based on screen ============
+        # 计算可用宽度（转换为英寸，DPI通常为100）/ Calculate available width (convert to inches, DPI usually 100)
+        dpi = 100
+        available_width_inches = (window_width - 80) / dpi  # 减去边距 / Minus margins
+        
+        # 每行高度根据屏幕高度自适应，确保每行的折线图完整显示 / Row height adapts to screen height, ensuring complete display
+        # 折线图区域占窗口高度的60%，柱状图占25%，其他控件占15%
+        line_area_height = window_height * 0.6  # 折线图区域更大 / Line chart area larger
+        line_height_per_row = max(3.0, line_area_height / dpi / max(1, line_chart_rows))
         total_line_height = line_chart_rows * line_height_per_row
         
-        # 创建折线图Figure / Create line chart figure
-        fig_line = plt.figure(figsize=(16, total_line_height))
+        # 创建折线图Figure，宽度自适应屏幕 / Create line chart figure with adaptive width
+        fig_line = plt.figure(figsize=(available_width_inches, total_line_height))
         
         # 使用GridSpec布局，每行2列 / Use GridSpec layout with 2 columns per row
         line_gs = fig_line.add_gridspec(
@@ -715,13 +730,13 @@ class ClassDetailView(ttk.Frame):
         line_canvas_widget.draw()
         line_canvas_widget.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # ============ 下方区域：柱状图（固定高度）/ Bottom region: Bar chart (fixed height) ============
+        # ============ 下方区域：柱状图（固定较小高度）/ Bottom region: Bar chart (fixed smaller height) ============
         bar_frame = ttk.LabelFrame(main_frame, text="班级总小码币统计", padding=10)
-        bar_frame.pack(fill=tk.X, padx=5, pady=5)
+        bar_frame.pack(fill=tk.X, padx=5, pady=5)  # 不使用expand，让柱状图区域更小
         
-        # 创建柱状图Figure / Create bar chart figure
-        bar_chart_height = 6  # 固定高度，确保有足够空间显示标签 / Fixed height for labels
-        fig_bar = plt.figure(figsize=(16, bar_chart_height))
+        # 创建柱状图Figure，高度更小且自适应屏幕 / Create bar chart figure with smaller adaptive height
+        bar_chart_height = max(3.0, (window_height * 0.25) / dpi)  # 柱状图区域占25%，更小 / Bar chart area takes 25%, smaller
+        fig_bar = plt.figure(figsize=(available_width_inches, bar_chart_height))
         
         ax_bar = fig_bar.add_subplot(111)
         
@@ -745,18 +760,8 @@ class ClassDetailView(ttk.Frame):
                        f'{int(height)}',
                        ha='center', va='bottom', fontsize=9, fontweight='bold')
         
-        # 根据学生数量自适应调整x轴标签显示 / Adaptive x-axis label display based on student count
-        if len(student_names) <= 5:
-            # 学生少，不旋转，标签水平显示 / Few students, no rotation
-            ax_bar.tick_params(axis='x', rotation=0, labelsize=9)
-        elif len(student_names) <= 10:
-            # 中等数量学生，45度旋转 / Medium number, 45 degree rotation
-            ax_bar.tick_params(axis='x', rotation=45, labelsize=9)
-            plt.setp(ax_bar.xaxis.get_majorticklabels(), ha='right')
-        else:
-            # 学生多，90度旋转，确保显示完整 / Many students, 90 degree rotation for full display
-            ax_bar.tick_params(axis='x', rotation=90, labelsize=8)
-            plt.setp(ax_bar.xaxis.get_majorticklabels(), ha='center')
+        # x轴标签正常显示（不旋转）/ x-axis labels displayed normally (no rotation)
+        ax_bar.tick_params(axis='x', rotation=0, labelsize=9)
         
         # 调整布局，确保标签不被截断 / Adjust layout to prevent label cutoff
         fig_bar.tight_layout(rect=[0, 0.03, 1, 0.97])

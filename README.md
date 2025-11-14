@@ -1,74 +1,148 @@
-# Nivalis-Starway Studio Monorepo · 牧星雪缘工作室多工具仓库
+# 班级管理应用 / Classroom Manager App
 
-欢迎来到 **Nivalis-Starway Studio**（牧星雪缘工作室）的多工具创意实验室。这个仓库以 Monorepo 形式管理所有的互动工具与游戏，统一的极光星空视觉风格、共享主题以及协同的开发体验帮助我们快速迭代未来的创意作品。
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Nivalis-Starway-Studio/Nivalis-Starway)
-## ✨ Overview 概览
-- **多工具架构**：单一仓库管理多个工具/游戏，便于共享主题、组件与资源。
-- **统一品牌视觉**：通过 `/shared/styles/theme.css` 定义的星空/极光主题，在所有页面保持一致的体验。
-- **扩展性设计**：`/tools` 目录为每个工具提供独立的代码与资源结构，方便持续扩展。
+一个基于 Tkinter 的班级管理应用，用于管理学生小码币系统。
 
-## 📁 Directory Structure 目录结构
+## 功能特性
+
+- 📚 **班级管理**：创建和管理多个班级
+- 👥 **学生管理**：添加、删除、编辑学生信息
+- 💰 **小码币系统**：
+  - 记录学生每周小码币
+  - 累计小码币统计
+  - 历史数据追踪
+- 📊 **图表统计**（v4.0最新优化）：
+  - 折线图：学生小码币变化趋势（每行2个学生，可滚动）
+  - 柱状图：班级总小码币统计
+  - **自适应屏幕分辨率**：根据当前屏幕大小自动调整图表尺寸
+  - **区域优化**：折线图区域更大（60%），柱状图区域更小（25%）
+  - **标签优化**：柱状图x轴人名正常显示（不旋转）
+- 💾 **数据持久化**：CSV格式自动保存
+
+## 快速开始
+
+### 环境要求
+
+- Python 3.7+
+- tkinter
+- matplotlib
+
+### 安装依赖
+
+```bash
+pip install -r requirements.txt
 ```
-.
-├── index.html                        # 主作品集入口页 · Portfolio Landing Page
-├── shared/                           # 跨工具共享资源 · Shared Resources
-│   ├── assets/                       # 公共素材占位 · Global Assets (placeholder)
-│   ├── components/                   # 公共组件占位 · Shared Components (placeholder)
-│   └── styles/
-│       └── theme.css                 # 统一主题变量与基础样式 · Global Theme Styles
-├── tools/
-│   └── snowflake-generator/          # 雪花生成器工具 · Snowflake Generator Tool
-│       ├── index.html
-│       ├── src/
-│       │   ├── gallery.js
-│       │   ├── keyboard.js
-│       │   ├── main.js
-│       │   ├── share.js
-│       │   └── snowflake.js
-│       ├── styles/
-│       │   └── main.css
-│       └── FEATURES.md               # 功能说明文档 · Feature Documentation
-├── LICENSE
-└── README.md
+
+### 运行应用
+
+#### Windows
+```bash
+scripts\run\run_app.bat
 ```
 
-## 🏁 Getting Started 快速上手
-1. **打开主站 / Open Landing Page**  
-   直接在浏览器中打开仓库根目录的 `index.html`，体验品牌主页与工具导航。
-2. **进入雪花生成器 / Launch Snowflake Generator**  
-   访问 `tools/snowflake-generator/index.html`，即可使用目前提供的互动雪花创作工具。
-3. **本地开发 / Local Development**  
-   建议通过本地服务器加载（例如 `python3 -m http.server 8000`），确保 ES6 模块正常工作。
+#### Linux/Mac
+```bash
+bash scripts/run/run_app.sh
+```
 
-## 🎨 Shared Theme 共享主题
-- 全部页面均引入 `shared/styles/theme.css`，提供颜色、字体、间距与按钮等基础样式。
-- 主题包含自适应断点、极光背景动画与星空细节，为后续工具提供统一视觉语言。
+或直接运行：
+```bash
+python3 tools/class-manager-app/main.py
+```
 
-## 🧰 Current Tools 当前工具
-| 工具 Tool | 说明 Description | 状态 Status |
-|-----------|------------------|-------------|
-| [Snowflake Generator · 雪花生成器](tools/snowflake-generator/) | 程序化雪花创作工具，支持画廊、键盘快捷键、分享与高分辨率导出。 | ✅ 已上线 Available |
+### 默认登录账号
 
-更多工具正在研发中，敬请期待。
+- 账号：`xigua`
+- 密码：`123456`
 
-## 🛣️ Roadmap 路线图
-1. Star Map Generator · 星图生成器 — 根据时间与地点生成专属星空
-2. Aurora Simulator · 极光模拟器 — 交互式极光渲染体验
-3. Crystal Generator · 晶体生成器 — 生成多面晶体与光照效果
-4. Audio Visualizer · 音乐可视化工具 — 声音与动画的同步表现
-5. Particle Art Studio · 粒子艺术工作室 — 粒子系统创意沙盒
-6. Fractal Explorer · 分形探索器 — 探索曼德博与 Julia 集
-7. Pixel Art Editor · 像素艺术编辑器 — 轻量像素画创作平台
-8. Terrain Generator · 地形生成器 — 程序化生成 3D 地形场景
-9. Poetry Generator · 诗歌生成器 — AI 辅助的诗歌灵感工具
-10. 更多创意项目持续规划中 · More ideas are on the way
+## 打包发布
 
-## 🤝 Contributing 贡献指南
-- 欢迎以 Issues 或 Pull Requests 的形式提交建议。建议遵循现有的目录结构与主题规范。
-- 新增工具时，请在 `/tools/<tool-name>/` 下创建独立的目录结构，并复用 `/shared` 中的样式与资源。
-- 所有新增内容请优先提供中英文对照，确保全球用户与中文用户都能愉快体验。
+### 打包为可执行文件
 
-## 📄 License 许可协议
-本项目遵循 [MIT License](LICENSE)。欢迎自由使用与拓展，只需保留版权声明。
+详细打包指南请查看：[docs/BUILD_README.md](docs/BUILD_README.md)
 
-让我们一同在星轨之间，雕刻灵感的雪花。❄️🌌
+#### Windows打包
+```bash
+cd scripts\build
+build_exe.bat
+```
+
+#### 跨平台打包
+```bash
+cd scripts/build
+python build_exe.py
+```
+
+打包后的可执行文件在 `dist/` 目录下。
+
+## 项目结构
+
+```
+/
+├── docs/                       # 文档
+│   ├── README.md              # 主文档（符号链接）
+│   ├── BUILD_README.md        # 打包指南
+│   ├── CHANGELOG.md           # 版本更新日志
+│   └── archive/               # 历史文档归档
+├── scripts/                   # 脚本
+│   ├── build/                # 打包脚本
+│   │   ├── build_exe.py
+│   │   ├── build_exe.bat
+│   │   └── build_windows.bat
+│   ├── run/                  # 运行脚本
+│   │   ├── run_app.bat
+│   │   └── run_app.sh
+│   └── test/                 # 测试脚本
+├── tools/                     # 应用主代码
+│   └── class-manager-app/
+│       ├── main.py           # 程序入口
+│       ├── data/             # 数据层
+│       └── ui/               # UI层
+├── requirements.txt           # Python依赖
+├── LICENSE                    # 许可证
+└── .gitignore                # Git忽略配置
+```
+
+## 最新更新 (v4.0)
+
+### 图表统计优化
+
+1. **自适应屏幕分辨率**
+   - 自动检测屏幕尺寸
+   - 窗口占屏幕90%，居中显示
+   - 图表宽度自适应屏幕宽度
+
+2. **折线图优化**
+   - 每行显示2个学生
+   - 支持鼠标滚轮滚动
+   - 区域占窗口高度60%（更大）
+   - 每个折线图完整显示
+
+3. **柱状图优化**
+   - 区域占窗口高度25%（更小）
+   - x轴人名正常显示（不旋转）
+   - 根据学生数量自适应高度
+
+4. **项目文件整理**
+   - 文档归档到 `docs/`
+   - 脚本分类到 `scripts/`
+   - 结构清晰，易于维护
+
+## 使用说明
+
+1. 启动应用后输入账号密码登录
+2. 选择或创建班级
+3. 添加学生，双击币数单元格修改小码币
+4. 点击"图表统计"查看可视化数据
+5. 数据自动保存到 `storage_data/` 目录
+
+## 更新日志
+
+详细的版本更新历史请查看：[docs/CHANGELOG.md](docs/CHANGELOG.md)
+
+## 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件
+
+## 技术支持
+
+如有问题或建议，欢迎提交 Issue。
